@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-
+from sklearn.preprocessing import StandardScaler
 import SMILES_functions
 
 
@@ -33,6 +33,36 @@ df_numerical = df_numerical.replace(",", ".", regex=True)
 Put preprocessing of numerical Data here 
 
 '''
+
+# Keep only valid rows in numerical data (drop rows with NaN)
+df_numerical = df_numerical.dropna()
+
+# To keep fingerprint alignment: select the same valid indices in df_full
+df_full = df_full.loc[df_numerical.index]
+
+
+# spliting inputs and outputs from df_numerical
+X_inputs = df_numerical[['HOMO_A', 'LUMO_A', 'EgCV_A', 'λ_A_absorption',
+                         'HOMO_D', 'LUMO_D', 'EgCV_D', 'λ_D_absorption']]
+
+y_outputs = df_numerical[['Voc', 'Jsc', 'FF', 'PCE']]
+
+
+# Scaling inputs
+scaler_inputs = StandardScaler()
+X_scaled = pd.DataFrame(
+    scaler_inputs.fit_transform(X_inputs),
+    columns=[f"scaled_{col}" for col in X_inputs.columns],
+    index=df_numerical.index
+)
+
+# Scaling outputs
+scaler_outputs = StandardScaler()
+y_scaled = pd.DataFrame(
+    scaler_outputs.fit_transform(y_outputs),
+    columns=[f"scaled_{col}" for col in y_outputs.columns],
+    index=df_numerical.index
+)
 
 
 # SMILES code processing
