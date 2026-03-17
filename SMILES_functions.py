@@ -53,14 +53,25 @@ def get_mordred_descriptors(smiles_column):
 
     df_mordred = calc.pandas(mols, nproc=1)
     df_mordred.index = valid_indices
-    df_mordred = df_mordred.reindex(smiles_column.index)
     df_mordred = df_mordred.apply(pd.to_numeric, errors="coerce")
 
-    # Remplacement des NaN par la médiane
-    df_mordred = df_mordred.fillna(df_mordred.median(numeric_only=True))
+    # Calculer la médiane sur les molécules valides
+    medians = df_mordred.median(numeric_only=True)
+
+    # Remplir les NaN partiels
+    df_mordred = df_mordred.fillna(medians)
+
+    # Réindexer pour inclure les SMILES invalides
+    df_mordred = df_mordred.reindex(smiles_column.index)
+
+    # Remplir les lignes des SMILES invalides avec la médiane
+    df_mordred = df_mordred.fillna(medians)
+
+    # Supprimer les colonnes entièrement vides (aucune médiane possible)
+    df_mordred = df_mordred.dropna(axis=1, how='all')
 
     return df_mordred
- 
+
 
 # Morgan Fingerprints -> return np_array
 def get_morgan_fingerprint(smiles, radius=2, n_bits=2048):

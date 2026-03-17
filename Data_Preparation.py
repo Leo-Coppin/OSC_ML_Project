@@ -66,7 +66,10 @@ y_scaled = pd.DataFrame(
 smiles_acceptor = df_full['SMILES_acc']
 smiles_donor = df_full['SMILES_don']
 
-#smiles_acceptor = pd.read_csv("MordredTest.csv", sep=";")
+# smiles_acceptor = smiles_acceptor.sample(n=30, random_state=42)
+# smiles_donor = smiles_donor.sample(n=30, random_state=42)
+# X_inputs = X_inputs.sample(n=30, random_state=42)
+# y_outputs = y_outputs.sample(n=30, random_state=42)
 
 lenght_columns = len(smiles_acceptor)
 
@@ -97,7 +100,7 @@ df_rdkit_output = y_scaled.loc[df_rdkit.index]
 df_rdkit.to_csv("Data_RDKit.csv", index=False, sep=';')
 df_rdkit_output.to_csv("Output_RDKit.csv", index=False, sep=";")
 
-"""
+
 # Mordred Descriptors
 print("Mordred Descriptors")
 df_mordred_acceptor = SMILES_functions.get_mordred_descriptors(smiles_acceptor)
@@ -107,14 +110,16 @@ df_mordred_donor = SMILES_functions.get_mordred_descriptors(smiles_donor)
 df_mordred_donor.columns = [f"mordred_donor_{c}" for c in df_mordred_donor.columns]
 
 # concatenantion Smiles acceptor, donor and input numerical Data
-df_mordred = pd.concat([df_mordred_acceptor,df_mordred_donor], axis=1)
+df_mordred = pd.concat([df_mordred_acceptor,df_mordred_donor, X_inputs], axis=1)
 
 # Dropping uncomplete lines
 df_mordred = df_mordred.dropna()
+df_mordred_output = y_scaled.loc[df_mordred.index]
 
 # Save in csv file
-df_mordred.to_csv("Data_Mordred.csv", index=False, sep=';')
-"""
+df_mordred.to_csv("Data_Mordred$.csv", index=False, sep=';')
+df_mordred_output.to_csv("Output_Mordred.csv", index=False, sep=";")
+
 
 # Morgan Fingerprints
 print("Morgan Fingerprints")
