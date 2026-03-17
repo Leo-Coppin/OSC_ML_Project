@@ -35,12 +35,30 @@ def get_mordred_descriptors(smiles_column):
         return pd.DataFrame(index=smiles_column.index)
 
     calc = Calculator(mordred_desc, ignore_3D=True)
-    mols = [smiles_to_mol(s) for s in smiles_column]
     
-    # nproc=1 désactive le multiprocessing -> résout le problème Windows
+    mols = []
+    valid_indices = []
+    
+    for idx, smiles in smiles_column.items():
+        mol = smiles_to_mol(smiles)
+        if mol is not None:
+            mols.append(mol)
+            valid_indices.append(idx)
+        else:
+            print(f"⚠️  SMILES invalide ignoré à l'index {idx} : {smiles}")
+    
+    if not mols:
+        print("❌ Aucune molécule valide trouvée.")
+        return pd.DataFrame(index=smiles_column.index)
+
     df_mordred = calc.pandas(mols, nproc=1)
-    df_mordred.index = smiles_column.index
+    df_mordred.index = valid_indices
+    df_mordred = df_mordred.reindex(smiles_column.index)
     df_mordred = df_mordred.apply(pd.to_numeric, errors="coerce")
+
+    # Remplacement des NaN par la médiane
+    df_mordred = df_mordred.fillna(df_mordred.median(numeric_only=True))
+
     return df_mordred
  
 

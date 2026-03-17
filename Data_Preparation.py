@@ -25,14 +25,11 @@ df_numerical = df[numerical_columns]
 # Decimal point uniformisation : , -> .
 df_numerical = df_numerical.replace(",", ".", regex=True)
 
-# Convert type to numeric if not the case
-#df_numerical = df_numerical.apply(pd.to_numeric, errors="ignore")
+#extract numbers 
+for col in df_numerical.columns:
+    df_numerical[col] = df_numerical[col].str.extract(r'([0-9.]+)')
 
-'''
-
-Put preprocessing of numerical Data here 
-
-'''
+df_numerical = df_numerical.apply(pd.to_numeric, errors="coerce")
 
 # Keep only valid rows in numerical data (drop rows with NaN)
 df_numerical = df_numerical.dropna()
@@ -69,6 +66,8 @@ y_scaled = pd.DataFrame(
 smiles_acceptor = df_full['SMILES_acc']
 smiles_donor = df_full['SMILES_don']
 
+#smiles_acceptor = pd.read_csv("MordredTest.csv", sep=";")
+
 lenght_columns = len(smiles_acceptor)
 
 #RDKit descriptors
@@ -87,31 +86,35 @@ df_rdkit_acceptor.columns=[f"rdkit_acceptor_{c}" for c in df_rdkit_acceptor.colu
 df_rdkit_donor = pd.DataFrame(rdkit_list_donor, index = df_full.index)
 df_rdkit_donor.columns=[f"rdkit_donor_{c}" for c in df_rdkit_donor.columns]
 
-df_rdkit = pd.concat([df_rdkit_acceptor, df_rdkit_donor], axis=1)
-# concatenantion with input numerical Data
+# concatenantion Smiles acceptor, donor and input numerical Data
+df_rdkit = pd.concat([df_rdkit_acceptor, df_rdkit_donor, X_inputs], axis=1)
 
 # Dropping uncomplete lines
 df_rdkit = df_rdkit.dropna()
+df_rdkit_output = y_scaled.loc[df_rdkit.index]
 
 # Save in csv file
 df_rdkit.to_csv("Data_RDKit.csv", index=False, sep=';')
+df_rdkit_output.to_csv("Output_RDKit.csv", index=False, sep=";")
 
+"""
 # Mordred Descriptors
-#print("Mordred Descriptors")
-#df_mordred_acceptor = SMILES_functions.get_mordred_descriptors(smiles_acceptor)
-#df_mordred_acceptor.columns = [f"mordred_acceptor_{c}" for c in df_mordred_acceptor.columns]
+print("Mordred Descriptors")
+df_mordred_acceptor = SMILES_functions.get_mordred_descriptors(smiles_acceptor)
+df_mordred_acceptor.columns = [f"mordred_acceptor_{c}" for c in df_mordred_acceptor.columns]
 
-#df_mordred_donor = SMILES_functions.get_mordred_descriptors(smiles_donor)
-#df_mordred_donor.columns = [f"mordred_donor_{c}" for c in df_mordred_donor.columns]
+df_mordred_donor = SMILES_functions.get_mordred_descriptors(smiles_donor)
+df_mordred_donor.columns = [f"mordred_donor_{c}" for c in df_mordred_donor.columns]
 
-#df_mordred = pd.concat([df_mordred_acceptor,df_mordred_donor], axis=1)
-# concatenantion with input numerical Data
+# concatenantion Smiles acceptor, donor and input numerical Data
+df_mordred = pd.concat([df_mordred_acceptor,df_mordred_donor], axis=1)
 
 # Dropping uncomplete lines
-#df_mordred = df_mordred.dropna()
+df_mordred = df_mordred.dropna()
 
 # Save in csv file
-#df_mordred.to_csv("Data_Mordred.csv", index=False, sep=';')
+df_mordred.to_csv("Data_Mordred.csv", index=False, sep=';')
+"""
 
 # Morgan Fingerprints
 print("Morgan Fingerprints")
@@ -121,15 +124,16 @@ df_morgan_acceptor = pd.DataFrame(morgan_matrix_acceptor, index=df_full.index, c
 morgan_matrix_donor = np.vstack([SMILES_functions.get_morgan_fingerprint(s) for s in smiles_donor])
 df_morgan_donor = pd.DataFrame(morgan_matrix_donor, index=df_full.index, columns=[f"morgan_donor_{i}" for i in range(morgan_matrix_donor.shape[1])])
 
-df_morgan = pd.concat([df_morgan_acceptor, df_morgan_donor], axis=1)
-# concatenantion with input numerical Data
+# concatenantion Smiles acceptor, donor and input numerical Data
+df_morgan = pd.concat([df_morgan_acceptor, df_morgan_donor, X_inputs], axis=1)
 
 # Dropping uncomplete lines
 df_morgan = df_morgan.dropna()
+df_morgan_output = y_scaled.loc[df_morgan.index]
 
 # Save in csv file
 df_morgan.to_csv("Data_Morgan.csv", index=False, sep=';')
-
+df_morgan_output.to_csv("Output_Morgan.csv", index=False, sep=";")
 
 # MACCS Keys fingerprints
 print("MACCS Keys Fingerprints")
@@ -139,15 +143,16 @@ df_maccs_acceptor = pd.DataFrame(maccs_matrix_acceptor, index=df_full.index, col
 maccs_matrix_donor = np.vstack([SMILES_functions.get_maccs_fingerprint(s) for s in smiles_donor])
 df_maccs_donor = pd.DataFrame(maccs_matrix_donor, index=df_full.index, columns=[f"maccs_donor_{i}" for i in range(maccs_matrix_donor.shape[1])])
 
-
-df_maccs = pd.concat([df_maccs_acceptor, df_maccs_donor], axis=1)
-# concatenantion with input numerical Data
+# concatenantion Smiles acceptor, donor and input numerical Data
+df_maccs = pd.concat([df_maccs_acceptor, df_maccs_donor, X_inputs], axis=1)
 
 # Dropping uncomplete lines
 df_maccs = df_maccs.dropna()
+df_maccs_output = y_scaled.loc[df_maccs.index]
 
 # Save in csv file
 df_maccs.to_csv("Data_MACCS.csv", index=False, sep=';')
+df_maccs_output.to_csv("Output_MACCS.csv", index=False, sep=";")
 
 #PubChem Fingerprints
 print("PubChem Fingerprints")
@@ -157,14 +162,15 @@ df_pubchem_acceptor = pd.DataFrame(pubchem_matrix_acceptor, index=df_full.index,
 pubchem_matrix_donor = np.vstack([SMILES_functions.get_pubchem_fingerprint(s) for s in smiles_donor])
 df_pubchem_donor = pd.DataFrame(pubchem_matrix_donor, index=df_full.index, columns=[f"pubchem_donor_{i}" for i in range(pubchem_matrix_donor.shape[1])])
 
-df_pubchem = pd.concat([df_pubchem_acceptor, df_pubchem_donor], axis=1)
-# concatenantion with input numerical Data
+# concatenantion Smiles acceptor, donor and input numerical Data
+df_pubchem = pd.concat([df_pubchem_acceptor, df_pubchem_donor, X_inputs], axis=1)
 
 # Dropping uncomplete lines
 df_pubchem = df_pubchem.dropna()
+df_pubchem_output = y_scaled.loc[df_pubchem.index]
 
 # Save in csv file
 df_pubchem.to_csv("Data_PubChem.csv", index=False, sep=';')
-
+df_pubchem_output.to_csv("Output_Pubchem.csv", index=False, sep=";")
 
 print("Data Prepraration Finished")
