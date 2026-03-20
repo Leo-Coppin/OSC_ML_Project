@@ -93,7 +93,7 @@ df_rdkit_donor = pd.DataFrame(rdkit_list_donor, index = df_full.index)
 df_rdkit_donor.columns=[f"rdkit_donor_{c}" for c in df_rdkit_donor.columns]
 
 # concatenantion Smiles acceptor, donor and input numerical Data
-df_rdkit = pd.concat([df_rdkit_acceptor, df_rdkit_donor, X_inputs], axis=1)
+df_rdkit = pd.concat([df_rdkit_acceptor, df_rdkit_donor, X_scaled], axis=1)
 
 # Dropping uncomplete lines
 df_rdkit = df_rdkit.dropna()
@@ -113,7 +113,7 @@ df_mordred_donor = SMILES_functions.get_mordred_descriptors(smiles_donor)
 df_mordred_donor.columns = [f"mordred_donor_{c}" for c in df_mordred_donor.columns]
 
 # concatenantion Smiles acceptor, donor and input numerical Data
-df_mordred = pd.concat([df_mordred_acceptor,df_mordred_donor, X_inputs], axis=1)
+df_mordred = pd.concat([df_mordred_acceptor,df_mordred_donor, X_scaled], axis=1)
 
 # Dropping uncomplete lines
 df_mordred = df_mordred.dropna()
@@ -133,7 +133,7 @@ morgan_matrix_donor = np.vstack([SMILES_functions.get_morgan_fingerprint(s) for 
 df_morgan_donor = pd.DataFrame(morgan_matrix_donor, index=df_full.index, columns=[f"morgan_donor_{i}" for i in range(morgan_matrix_donor.shape[1])])
 
 # concatenantion Smiles acceptor, donor and input numerical Data
-df_morgan = pd.concat([df_morgan_acceptor, df_morgan_donor, X_inputs], axis=1)
+df_morgan = pd.concat([df_morgan_acceptor, df_morgan_donor, X_scaled], axis=1)
 
 # Dropping uncomplete lines
 df_morgan = df_morgan.dropna()
@@ -152,7 +152,7 @@ maccs_matrix_donor = np.vstack([SMILES_functions.get_maccs_fingerprint(s) for s 
 df_maccs_donor = pd.DataFrame(maccs_matrix_donor, index=df_full.index, columns=[f"maccs_donor_{i}" for i in range(maccs_matrix_donor.shape[1])])
 
 # concatenantion Smiles acceptor, donor and input numerical Data
-df_maccs = pd.concat([df_maccs_acceptor, df_maccs_donor, X_inputs], axis=1)
+df_maccs = pd.concat([df_maccs_acceptor, df_maccs_donor, X_scaled], axis=1)
 
 # Dropping uncomplete lines
 df_maccs = df_maccs.dropna()
@@ -171,7 +171,7 @@ pubchem_matrix_donor = np.vstack([SMILES_functions.get_pubchem_fingerprint(s) fo
 df_pubchem_donor = pd.DataFrame(pubchem_matrix_donor, index=df_full.index, columns=[f"pubchem_donor_{i}" for i in range(pubchem_matrix_donor.shape[1])])
 
 # concatenantion Smiles acceptor, donor and input numerical Data
-df_pubchem = pd.concat([df_pubchem_acceptor, df_pubchem_donor, X_inputs], axis=1)
+df_pubchem = pd.concat([df_pubchem_acceptor, df_pubchem_donor, X_scaled], axis=1)
 
 # Dropping uncomplete lines
 df_pubchem = df_pubchem.dropna()
