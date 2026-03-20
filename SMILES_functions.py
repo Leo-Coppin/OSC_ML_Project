@@ -1,18 +1,21 @@
 import pandas as pd 
 import numpy as np
-
+ 
 from rdkit import Chem
-from rdkit.Chem import AllChem, MACCSkeys, Descriptors
-
+from rdkit.Chem import MACCSkeys, Descriptors
+from rdkit.Chem.rdFingerprintGenerator import GetMorganGenerator
+ 
 import warnings
 warnings.filterwarnings("ignore")
-
+ 
+_morgan_generator = GetMorganGenerator(radius=2, fpSize=2048)
+ 
 def smiles_to_mol(smiles):
     if pd.isna(smiles) or str(smiles).strip()=="":
         return None
     return Chem.MolFromSmiles(str(smiles).strip())
-
-
+ 
+ 
 # rdkit descriptors -> return dictionnary
 def get_rdkit_descriptors(smiles):
     mol = smiles_to_mol(smiles)
@@ -25,7 +28,7 @@ def get_rdkit_descriptors(smiles):
         except Exception:
             result[name] = np.nan
     return result 
-
+ 
 # Mordred descriptors -> return dataframe 
 def get_mordred_descriptors(smiles_column):
     try:
@@ -33,7 +36,7 @@ def get_mordred_descriptors(smiles_column):
     except ImportError:
         print("⚠️  Mordred non installé.")
         return pd.DataFrame(index=smiles_column.index)
-
+ 
     calc = Calculator(mordred_desc, ignore_3D=True)
     
     mols = []
@@ -50,37 +53,37 @@ def get_mordred_descriptors(smiles_column):
     if not mols:
         print("❌ Aucune molécule valide trouvée.")
         return pd.DataFrame(index=smiles_column.index)
-
+ 
     df_mordred = calc.pandas(mols, nproc=1)
     df_mordred.index = valid_indices
     df_mordred = df_mordred.apply(pd.to_numeric, errors="coerce")
-
-    # Calculer la médiane sur les molécules valides
+ 
     medians = df_mordred.median(numeric_only=True)
-
-    # Remplir les NaN partiels
+ 
     df_mordred = df_mordred.fillna(medians)
-
-    # Réindexer pour inclure les SMILES invalides
     df_mordred = df_mordred.reindex(smiles_column.index)
-
-    # Remplir les lignes des SMILES invalides avec la médiane
     df_mordred = df_mordred.fillna(medians)
-
-    # Supprimer les colonnes entièrement vides (aucune médiane possible)
     df_mordred = df_mordred.dropna(axis=1, how='all')
-
+ 
     return df_mordred
-
-
+ 
+ 
 # Morgan Fingerprints -> return np_array
 def get_morgan_fingerprint(smiles, radius=2, n_bits=2048):
     mol = smiles_to_mol(smiles)
     if mol is None:
         return np.zeros(n_bits, dtype=np.uint8)
-    fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=radius, nBits=n_bits)
+    
+    # Utilise le générateur global si les paramètres correspondent,
+    # sinon crée un générateur temporaire
+    if radius == 2 and n_bits == 2048:
+        fp = _morgan_generator.GetFingerprint(mol)
+    else:
+        gen = GetMorganGenerator(radius=radius, fpSize=n_bits)
+        fp = gen.GetFingerprint(mol)
+    
     return np.array(fp, dtype=np.uint8)
-
+ 
 # Maccs keys fingerprints -> return np_array 
 def get_maccs_fingerprint(smiles):
     mol = smiles_to_mol(smiles)
@@ -89,10 +92,9 @@ def get_maccs_fingerprint(smiles):
     fp = MACCSkeys.GenMACCSKeys(mol)
     return np.array(fp, dtype=np.uint8)
  
-
+ 
 # pubchem fingerprints -> return array
 def get_pubchem_fingerprint(smiles):
-    #need internet connexion for calls to API pubchem
     try:
         import pubchempy as pcp
     except ImportError:
@@ -106,12 +108,11 @@ def get_pubchem_fingerprint(smiles):
         if not compounds:
             return np.zeros(881, dtype=np.uint8)
         
-        fp_hex = compounds[0].cactvs_fingerprint   # chaîne binaire '0110...'
+        fp_hex = compounds[0].cactvs_fingerprint
         if fp_hex is None:
             return np.zeros(881, dtype=np.uint8)
         
         fp_array = np.array([int(b) for b in fp_hex], dtype=np.uint8)
-        # Assurer longueur 881
         if len(fp_array) < 881:
             fp_array = np.pad(fp_array, (0, 881 - len(fp_array)))
         return fp_array[:881]

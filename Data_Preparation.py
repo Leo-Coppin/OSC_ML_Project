@@ -13,8 +13,8 @@ df = pd.read_csv(
 
 # Choosen columns  : SMILES code, HOMO, LUMO, EgCV, λ absorption for Donor and Acceptor 
 # In this dataset we’ll keep the columns Voc, Jsc, FF and PCE as outputs.
-choosen_columns = ['SMILES_acc', 'SMILES_don', 'Voc', 'Jsc', 'FF', 'PCE', 'HOMO_A', 'LUMO_A', 'EgCV_A', 'λ_A_absorption', 'HOMO_D', 'LUMO_D', 'EgCV_D', 'λ_D_absorption']
-numerical_columns =  ['Voc', 'Jsc', 'FF', 'PCE', 'HOMO_A', 'LUMO_A', 'EgCV_A', 'λ_A_absorption', 'HOMO_D', 'LUMO_D', 'EgCV_D', 'λ_D_absorption']
+choosen_columns = ['SMILES_acc', 'SMILES_don', 'Voc', 'Jsc', 'FF', 'PCE', 'HOMO_A', 'LUMO_A', 'EgCV_A', 'λ_A_absorption', 'EgA_opt', 'HOMO_D', 'LUMO_D', 'EgCV_D', 'λ_D_absorption', 'EgD_opt']
+numerical_columns =  ['Voc', 'Jsc', 'FF', 'PCE', 'HOMO_A', 'LUMO_A', 'EgCV_A', 'λ_A_absorption', 'EgA_opt', 'HOMO_D', 'LUMO_D', 'EgCV_D', 'λ_D_absorption', 'EgD_opt']
 
 df_full = df[choosen_columns]
 
@@ -39,8 +39,8 @@ df_full = df_full.loc[df_numerical.index]
 
 
 # spliting inputs and outputs from df_numerical
-X_inputs = df_numerical[['HOMO_A', 'LUMO_A', 'EgCV_A', 'λ_A_absorption',
-                         'HOMO_D', 'LUMO_D', 'EgCV_D', 'λ_D_absorption']]
+X_inputs = df_numerical[['HOMO_A', 'LUMO_A', 'EgCV_A', 'λ_A_absorption', 'EgA_opt',
+                          'HOMO_D', 'LUMO_D', 'EgCV_D', 'λ_D_absorption', 'EgD_opt']]
 
 y_outputs = df_numerical[['Voc', 'Jsc', 'FF', 'PCE']]
 
