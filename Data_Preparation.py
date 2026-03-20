@@ -61,6 +61,9 @@ y_scaled = pd.DataFrame(
     index=df_numerical.index
 )
 
+X_scaled.to_csv("Data_Compatibility_score.csv", index=False, sep=';')
+y_scaled.to_csv("Output_Compatibility_score.csv", index=False, sep=';')
+
 
 # SMILES code processing
 smiles_acceptor = df_full['SMILES_acc']
