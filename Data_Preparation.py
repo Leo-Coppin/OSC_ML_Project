@@ -42,6 +42,12 @@ df_full = df_full.loc[df_numerical.index]
 X_inputs = df_numerical[['HOMO_A', 'LUMO_A', 'EgCV_A', 'λ_A_absorption', 'EgA_opt',
                           'HOMO_D', 'LUMO_D', 'EgCV_D', 'λ_D_absorption', 'EgD_opt']]
 
+X_inputs['delta_LUMO']    = X_inputs['LUMO_A'] - X_inputs['LUMO_D']
+X_inputs['delta_HOMO']    = X_inputs['HOMO_A'] - X_inputs['HOMO_D']
+X_inputs['HOMO_D_LUMO_A'] = X_inputs['HOMO_D'] - X_inputs['LUMO_A']  # gap interfacial → lié à Voc
+X_inputs['delta_Eg']      = X_inputs['EgCV_A'] - X_inputs['EgCV_D']
+X_inputs['delta_lambda']  = X_inputs['λ_A_absorption'] - X_inputs['λ_D_absorption']
+
 y_outputs = df_numerical[['Voc', 'Jsc', 'FF', 'PCE']]
 
 
@@ -64,7 +70,7 @@ y_scaled = pd.DataFrame(
 X_scaled.to_csv("Data_Compatibility_score.csv", index=False, sep=';')
 y_scaled.to_csv("Output_Compatibility_score.csv", index=False, sep=';')
 
-
+"""
 # SMILES code processing
 smiles_acceptor = df_full['SMILES_acc']
 smiles_donor = df_full['SMILES_don']
@@ -180,5 +186,5 @@ df_pubchem_output = y_scaled.loc[df_pubchem.index]
 # Save in csv file
 df_pubchem.to_csv("Data_PubChem.csv", index=False, sep=';')
 df_pubchem_output.to_csv("Output_Pubchem.csv", index=False, sep=";")
-
+"""
 print("Data Prepraration Finished")
