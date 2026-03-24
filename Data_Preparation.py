@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 import SMILES_functions
+import joblib
 
 
 # Opening CSV File
@@ -60,6 +61,10 @@ y_scaled = pd.DataFrame(
     columns=[f"scaled_{col}" for col in y_outputs.columns],
     index=df_numerical.index
 )
+
+joblib.dump(scaler_outputs, "scaler_outputs.pkl")
+joblib.dump(scaler_inputs, "scaler_inputs.pkl")
+
 
 X_scaled.to_csv("Data_Compatibility_score.csv", index=False, sep=';')
 y_scaled.to_csv("Output_Compatibility_score.csv", index=False, sep=';')
