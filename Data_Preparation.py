@@ -22,7 +22,6 @@ df_full = df[choosen_columns]
 # without SMILES acceptor and SMILES donor -> only numerical columns
 df_numerical = df[numerical_columns]
 
-
 # Decimal point uniformisation : , -> .
 df_numerical = df_numerical.replace(",", ".", regex=True)
 
@@ -45,6 +44,11 @@ X_inputs = df_numerical[['HOMO_A', 'LUMO_A', 'EgCV_A', 'λ_A_absorption', 'EgA_o
 
 y_outputs = df_numerical[['Voc', 'Jsc', 'FF', 'PCE']]
 
+X_inputs['delta_LUMO']    = X_inputs['LUMO_A'] - X_inputs['LUMO_D']
+X_inputs['delta_HOMO']    = X_inputs['HOMO_A'] - X_inputs['HOMO_D']
+X_inputs['HOMO_D_LUMO_A'] = X_inputs['HOMO_D'] - X_inputs['LUMO_A']  # gap interfacial → lié à Voc
+X_inputs['delta_Eg']      = X_inputs['EgCV_A'] - X_inputs['EgCV_D']
+X_inputs['delta_lambda']  = X_inputs['λ_A_absorption'] - X_inputs['λ_D_absorption']
 
 # Scaling inputs
 scaler_inputs = StandardScaler()
@@ -80,7 +84,7 @@ smiles_donor = df_full['SMILES_don']
 # y_outputs = y_outputs.sample(n=30, random_state=42)
 
 lenght_columns = len(smiles_acceptor)
-
+"""
 #RDKit descriptors
 print("RDKit Descriptors")
 rdkit_list_acceptor = []
@@ -185,5 +189,5 @@ df_pubchem_output = y_scaled.loc[df_pubchem.index]
 # Save in csv file
 df_pubchem.to_csv("Data_PubChem.csv", index=False, sep=';')
 df_pubchem_output.to_csv("Output_Pubchem.csv", index=False, sep=";")
-
+"""
 print("Data Prepraration Finished")
