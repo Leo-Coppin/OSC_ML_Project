@@ -26,3 +26,22 @@ individual_r2 = r2_score(y_test, y_pred, multioutput='raw_values')
 # Affichage propre
 for name, score in zip(y.columns, individual_r2):
     print(f"Score R² pour {name} : {score:.3f}")
+    
+# 4. Feature importances par target
+feature_names = X.columns.tolist()
+target_names = y.columns.tolist()
+
+importances_per_target = pd.DataFrame(
+    [est.feature_importances_ for est in multi_model.estimators_],
+    index=target_names,
+    columns=feature_names
+)
+
+print("\nImportance des features par target :")
+print(importances_per_target.round(3))
+
+# 5. Importance moyenne sur les 4 targets
+mean_importance = importances_per_target.mean(axis=0).sort_values(ascending=False)
+
+print("\nImportance moyenne (triée) :")
+print(mean_importance.round(3))

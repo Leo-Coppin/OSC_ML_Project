@@ -142,9 +142,9 @@ def create_optuna_objective(X_train_val, y_train_val, input_dim, n_folds=10):
             'weight_decay'   : trial.suggest_float('weight_decay', 1e-5, 1e-2, log=True),
             'dropout_rate'   : trial.suggest_float('dropout_rate', 0.0, 0.3),
             'use_batch_norm' : trial.suggest_categorical('use_batch_norm', [True, False]),
-            'batch_size'     : trial.suggest_categorical('batch_size', [16, 32, 64, 128]),
+            'batch_size'     : trial.suggest_categorical('batch_size', [32, 64, 128]),
             'epochs'         : 500,     # early stopping s'en chargera
-            'patience'       : trial.suggest_int('patience', 5, 40),
+            'patience'       : trial.suggest_int('patience', 5, 30),
         }
  
         # --- K-Fold Cross Validation ---

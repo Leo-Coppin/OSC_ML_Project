@@ -24,10 +24,10 @@ input_dim = X_train.shape[1]
 
 #Optuna Search
 print("\nOptuna Search\n")
-study = csf.run_optuna_search(X_train, y_train, input_dim, n_trials=150)
+#study = csf.run_optuna_search(X_train, y_train, input_dim, n_trials=20)
 
-"""# one of best models 
-best_params = {
+# one of best models 
+best_params1 = {
     'embedding_dim' : 64,
     'n_layers'      : 3,
     'activation'    : 'relu',
@@ -39,27 +39,51 @@ best_params = {
     'batch_size'    : 128,
     'patience'      : 6
 }
+
+best_params2 = {
+    'embedding_dim': 64, 
+    'n_layers': 4, 
+    'activation': 'relu', 
+    'lr': 0.00023909722301264757, 
+    'optimizer': 'adam', 
+    'weight_decay': 0.00032256486259909833, 
+    'dropout_rate': 0.042798293655327946, 
+    'use_batch_norm': True, 
+    'batch_size': 64, 
+    'patience': 21
+} #. Best is trial 29 with value: 0.4254030793905258.
+
+best_params3 = {
+    'embedding_dim': 32, 
+    'n_layers': 5, 
+    'activation': 'relu', 
+    'lr': 0.001599257482433536, 
+    'optimizer': 'adamw', 
+    'weight_decay': 0.0030671793716585335, 
+    'dropout_rate': 0.01638058979312613, 
+    'use_batch_norm': True, 
+    'batch_size': 128, 
+    'patience': 28
+}# Best is trial 4 with value: 0.4328871637582779.
 # epoch = 500 
 #                MAE    RMSE      R2
 # scaled_Voc  0.4041  0.6657  0.5241
 # scaled_Jsc  0.3870  0.5387  0.7087
 # scaled_FF   0.5689  0.8194  0.4170
 # scaled_PCE  0.4216  0.5627  0.6741
-"""
+best_params = [best_params1, best_params2, best_params3]
 
- 
-#Training final model with Optuna Search params
-print("\nTraining final model\n")
-final_model, final_hyperparams = csf.train_final_model(study.best_trial.params, X_train, y_train, input_dim, 1000)
-final_model.summary()
+for params in best_params :
+    #Training final model with Optuna Search params
+    #print("\nTraining final model\n")
+    final_model, final_hyperparams = csf.train_final_model(best_params1, X_train, y_train, input_dim, 500)
+    #final_model.summary()
 
-#Evaluation on Final Test set
-print("\nModel Evaluation\n")
-results, y_pred, y_true = csf.evaluate_model(final_model, X_test, y_test,target_cols)
-results_df = pd.DataFrame(results).T
-print(results_df.round(4))
-
-
+    #Evaluation on Final Test set
+    #print("\nModel Evaluation\n")
+    results, y_pred, y_true = csf.evaluate_model(final_model, X_test, y_test,target_cols)
+    results_df = pd.DataFrame(results).T
+    print(results_df.round(4))
 
 final_model.save('ann_CS_OSC.keras')
 print("\nModel saved")
