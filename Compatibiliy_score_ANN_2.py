@@ -24,9 +24,9 @@ input_dim = X_train.shape[1]
 
 #Optuna Search
 print("\nOptuna Search\n")
-#study = csf.run_optuna_search(X_train, y_train, input_dim, n_trials=150)
+study = csf.run_optuna_search(X_train, y_train, input_dim, n_trials=150)
 
-# one of best models 
+"""# one of best models 
 best_params = {
     'embedding_dim' : 64,
     'n_layers'      : 3,
@@ -37,6 +37,7 @@ best_params = {
     'dropout_rate'  : 0.06628799569948823,
     'use_batch_norm': True,
     'batch_size'    : 128,
+    'patience'      : 6
 }
 # epoch = 500 
 #                MAE    RMSE      R2
@@ -44,20 +45,21 @@ best_params = {
 # scaled_Jsc  0.3870  0.5387  0.7087
 # scaled_FF   0.5689  0.8194  0.4170
 # scaled_PCE  0.4216  0.5627  0.6741
+"""
 
-
+ 
 #Training final model with Optuna Search params
 print("\nTraining final model\n")
-final_model, final_hyperparams = csf.train_final_model(best_params, X_train, y_train, input_dim)
+final_model, final_hyperparams = csf.train_final_model(study.best_trial.params, X_train, y_train, input_dim, 1000)
 final_model.summary()
-
 
 #Evaluation on Final Test set
 print("\nModel Evaluation\n")
 results, y_pred, y_true = csf.evaluate_model(final_model, X_test, y_test,target_cols)
-
 results_df = pd.DataFrame(results).T
 print(results_df.round(4))
+
+
 
 final_model.save('ann_CS_OSC.keras')
 print("\nModel saved")

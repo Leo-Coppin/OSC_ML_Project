@@ -65,7 +65,7 @@ def build_model(input_dim, hyperparams):
 
 
 #training the previous model -> return training history
-def train_model(model, X_train, y_train, X_val, y_val, hyperparams):
+def train_model(model, X_train, y_train, X_val, y_val, hyperparams, extra_callbacks=[]):
     #stop if no amelioration and restore best weights
     early_stop = keras.callbacks.EarlyStopping(
         monitor='val_loss',
@@ -80,13 +80,16 @@ def train_model(model, X_train, y_train, X_val, y_val, hyperparams):
         patience=10,
         min_lr=1e-6
     )
- 
+    all_callbacks = [early_stop, reduce_lr]
+    if extra_callbacks != []:
+        all_callbacks.append(extra_callbacks)
+    
     history = model.fit(
         X_train, y_train,
         validation_data=(X_val, y_val),
         epochs=hyperparams['epochs'],
         batch_size=hyperparams['batch_size'],
-        callbacks=[early_stop, reduce_lr],
+        callbacks=all_callbacks,
         verbose=0
     )
  
@@ -111,17 +114,17 @@ def evaluate_model(model, X_test, y_test, target_cols):
 
 
 
-def create_optuna_objective(X_train_val, y_train_val, input_dim, n_folds=5):
+def create_optuna_objective(X_train_val, y_train_val, input_dim, n_folds=10):
     #Create objective function for Optuna
     
     # Each Trial test a combination of hyperparams with K-FoldCV  
     def objective(trial):
         # Hyperparams search
         # size of embedding layers
-        embedding_dim = trial.suggest_categorical('embedding_dim', [8, 16, 32, 64])
+        embedding_dim = trial.suggest_categorical('embedding_dim', [16, 32, 64])
         
         # number of hidden layers
-        n_layers = trial.suggest_int('n_layers', 2, 4)
+        n_layers = trial.suggest_int('n_layers', 2, 5)
 
         # size of each layers -> decreasing into funnel shape -> decrease by power of 2
         hidden_layers = [
@@ -141,7 +144,7 @@ def create_optuna_objective(X_train_val, y_train_val, input_dim, n_folds=5):
             'use_batch_norm' : trial.suggest_categorical('use_batch_norm', [True, False]),
             'batch_size'     : trial.suggest_categorical('batch_size', [16, 32, 64, 128]),
             'epochs'         : 500,     # early stopping s'en chargera
-            'patience'       : 30,
+            'patience'       : trial.suggest_int('patience', 5, 40),
         }
  
         # --- K-Fold Cross Validation ---
@@ -206,7 +209,7 @@ def run_optuna_search(X_train_val, y_train_val, input_dim, n_trials=150):
 
 
 #training with best hyperparameters found
-def train_final_model(best_params, X_train_val, y_train_val, input_dim):
+def train_final_model(best_params, X_train_val, y_train_val, input_dim, epoch):
     # Reconstruction model based on best Optuna parameters
     n_layers = best_params['n_layers']
     embedding_dim = best_params['embedding_dim']
@@ -226,8 +229,8 @@ def train_final_model(best_params, X_train_val, y_train_val, input_dim):
         'dropout_rate'   : best_params['dropout_rate'],
         'use_batch_norm' : best_params['use_batch_norm'],
         'batch_size'     : best_params['batch_size'],
-        'epochs'         : 500,
-        'patience'       : 20,
+        'epochs'         : epoch,
+        'patience'       : best_params['patience'],
     }
 
     X_train_val_np = np.array(X_train_val)
@@ -238,6 +241,14 @@ def train_final_model(best_params, X_train_val, y_train_val, input_dim):
     )
 
     model = build_model(input_dim, hyperparams)
-    train_model(model, X_tr, y_tr, X_val, y_val, hyperparams)
+    
+    # --- Callback TensorBoard ---
+    tensorboard_cb = keras.callbacks.TensorBoard(
+        log_dir='./tensorboard_logs',   # dossier où les logs sont sauvegardés
+        histogram_freq=1,               # histogramme des poids à chaque epoch
+        write_graph=True,
+    )
+    
+    train_model(model, X_tr, y_tr, X_val, y_val, hyperparams, extra_callbacks=tensorboard_cb)
 
     return model, hyperparams
