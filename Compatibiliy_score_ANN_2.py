@@ -24,9 +24,9 @@ input_dim = X_train.shape[1]
 
 #Optuna Search
 print("\nOptuna Search\n")
-study = csf.run_optuna_search(X_train, y_train, input_dim, n_trials=50)
+#study = csf.run_optuna_search(X_train, y_train, input_dim, n_trials=150)
 
-""" one of best models 
+# one of best models 
 best_params = {
     'embedding_dim' : 64,
     'n_layers'      : 3,
@@ -44,11 +44,11 @@ best_params = {
 # scaled_Jsc  0.3870  0.5387  0.7087
 # scaled_FF   0.5689  0.8194  0.4170
 # scaled_PCE  0.4216  0.5627  0.6741
-"""
+
 
 #Training final model with Optuna Search params
 print("\nTraining final model\n")
-final_model, final_hyperparams = csf.train_final_model(study.best_trial.params, X_train, y_train, input_dim)
+final_model, final_hyperparams = csf.train_final_model(best_params, X_train, y_train, input_dim)
 final_model.summary()
 
 
