@@ -120,6 +120,12 @@ X_augmented['Target_CI'] = df_all['Target_CI']
 
 X_augmented.to_csv("Dataset_with_Compatibility_Score.csv", index=False, sep=';')
 
+df_ci_final = pd.DataFrame(df_all['Target_CI'].values, 
+                           index=X.index, 
+                           columns=['Target_CI'])
+
+df_ci_final.to_csv("temp_ci_score.csv", sep=';')
+
 print("\n--- COMPATIBILITY SCORE GENERATED ---")
 print(f"Max CI reached in dataset: {df_all['Target_CI'].max():.3f}")
 print(f"Mean CI of the dataset: {df_all['Target_CI'].mean():.3f}")
