@@ -92,3 +92,35 @@ plt.tight_layout(rect=[0, 0, 1, 0.95])
 plt.subplots_adjust(wspace=0.3, hspace=0.4)
 
 plt.show()
+
+
+all_preds_scaled = final_model.predict(X)
+all_preds_real = scaler_outputs.inverse_transform(all_preds_scaled)
+
+df_all = pd.DataFrame(all_preds_real, columns=['Voc', 'Jsc', 'FF', 'PCE'])
+
+# Relative Normalization (0 to 1 based on your 1576 rows)
+# We store min/max now to allow future predictions to exceed 1
+v_min, v_max = df_all['Voc'].min(), df_all['Voc'].max()
+j_min, j_max = df_all['Jsc'].min(), df_all['Jsc'].max()
+f_min, f_max = df_all['FF'].min(), df_all['FF'].max()
+
+v_n = (df_all['Voc'] - v_min) / (v_max - v_min)
+j_n = (df_all['Jsc'] - j_min) / (j_max - j_min)
+f_n = (df_all['FF'] - f_min) / (f_max - f_min)
+
+# Calculate CI: Geometric Mean of the 3 components
+# We use .clip(lower=0.001) to avoid math errors with zero/negative values
+df_all['Target_CI'] = (v_n.clip(lower=0.001) * j_n.clip(lower=0.001) * f_n.clip(lower=0.001))**(1/3)
+
+# Save the new Augmented Dataset
+# This dataset now contains your 10 inputs + the physical Latent Score
+X_augmented = X.copy()
+X_augmented['Target_CI'] = df_all['Target_CI']
+
+X_augmented.to_csv("Dataset_with_Compatibility_Score.csv", index=False, sep=';')
+
+print("\n--- COMPATIBILITY SCORE GENERATED ---")
+print(f"Max CI reached in dataset: {df_all['Target_CI'].max():.3f}")
+print(f"Mean CI of the dataset: {df_all['Target_CI'].mean():.3f}")
+print("New target saved in: 'Dataset_with_Compatibility_Score.csv'")
