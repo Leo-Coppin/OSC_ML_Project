@@ -65,8 +65,17 @@ y_scaled = pd.DataFrame(
     index=df_numerical.index
 )
 
+<<<<<<< Updated upstream
 X_scaled.to_csv("Data_Compatibility_score.csv", index=False, sep=';')
 y_scaled.to_csv("Output_Compatibility_score.csv", index=False, sep=';')
+=======
+joblib.dump(scaler_outputs, "scaler_outputs.pkl")
+joblib.dump(scaler_inputs, "scaler_inputs.pkl")
+
+
+X_scaled.to_csv("Data_Compatibility_score15.csv", index=False, sep=';')
+y_scaled.to_csv("Output_Compatibility_score15.csv", index=False, sep=';')
+>>>>>>> Stashed changes
 
 
 # SMILES code processing

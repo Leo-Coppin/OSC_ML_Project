@@ -144,7 +144,7 @@ def create_optuna_objective(X_train_val, y_train_val, input_dim, n_folds=10):
             'use_batch_norm' : trial.suggest_categorical('use_batch_norm', [True, False]),
             'batch_size'     : trial.suggest_categorical('batch_size', [32, 64, 128]),
             'epochs'         : 500,     # early stopping s'en chargera
-            'patience'       : trial.suggest_int('patience', 5, 30),
+            'patience'       : trial.suggest_categorical('patience', [5, 10, 15, 20, 25, 30]),
         }
  
         # --- K-Fold Cross Validation ---
