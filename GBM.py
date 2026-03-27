@@ -130,3 +130,24 @@ print("\n--- COMPATIBILITY SCORE GENERATED ---")
 print(f"Max CI reached in dataset: {df_all['Target_CI'].max():.3f}")
 print(f"Mean CI of the dataset: {df_all['Target_CI'].mean():.3f}")
 print("New target saved in: 'Dataset_with_Compatibility_Score.csv'")
+
+
+# print("\n--- Determining Feature importance for ANN ---\n")
+# # Getting feature importance per target
+# feature_names = X_train.columns.tolist()
+
+# importances_per_target = pd.DataFrame(
+#     [est.feature_importances_ for est in final_model.estimators_],
+#     index=['Voc', 'Jsc', 'FF', 'PCE'],
+#     columns=feature_names
+# )
+# # put features in line
+# importances_per_target = importances_per_target.T
+
+# # add mean
+# importances_per_target["Mean"] = importances_per_target.mean(axis=1)
+# importances_per_target = importances_per_target.sort_values(by="Mean", ascending=False)
+
+# importances_per_target.to_csv("importance_target.csv", index=True, sep=';')
+
+# print(importances_per_target.round(3))

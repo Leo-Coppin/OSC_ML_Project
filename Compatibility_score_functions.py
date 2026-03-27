@@ -1,7 +1,5 @@
 import numpy as np
-import pandas as pd
-import tensorflow as tf
-from tensorflow import keras
+import keras
 
 from keras.layers import Input, BatchNormalization, Dropout, Dense, Activation
 from keras.models import Model
@@ -10,9 +8,9 @@ from keras.metrics import R2Score
 
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.preprocessing import MinMaxScaler
+
 import optuna
-import warnings
-warnings.filterwarnings('ignore')
 
 def build_model(input_dim, hyperparams):
     #input layer
@@ -252,3 +250,29 @@ def train_final_model(best_params, X_train_val, y_train_val, input_dim, epoch):
     train_model(model, X_tr, y_tr, X_val, y_val, hyperparams, extra_callbacks=tensorboard_cb)
 
     return model, hyperparams
+
+def extract_compatibility_index(model, X_scaled, y_scaled, selected_features):
+    X_scaled = X_scaled[selected_features]
+    
+    # Extract embedding layer (layers just before the output)
+    embedding_model = keras.Model(
+        inputs=model.input,
+        outputs=model.get_layer('embedding_CS').output,
+        name='CI_extractor'
+    )
+ 
+    # CI Vector for each sample
+    CI_vectors = embedding_model.predict(X_scaled, verbose=0)
+ 
+    # Scalar score : scalar multiplication of the vector
+    CI_scores = np.linalg.norm(CI_vectors, axis=1)
+    
+    #reshape as one feature
+    CI_scores=CI_scores.reshape(-1,1)
+    
+    #Standardization
+    scaler = MinMaxScaler((-1,1), copy=False)
+    CI_scores = scaler.fit_transform(CI_scores)
+    
+    y_scaled['CS_ANN'] = CI_scores
+    return y_scaled
