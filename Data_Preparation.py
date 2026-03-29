@@ -45,6 +45,8 @@ X_inputs = df_numerical[['HOMO_A', 'LUMO_A', 'EgCV_A', 'λ_A_absorption', 'EgA_o
 
 y_outputs = df_numerical[['Voc', 'Jsc', 'FF', 'PCE']]
 
+y_outputs['delta_HOMO'] = X_inputs['HOMO_A'] - X_inputs['HOMO_D']
+y_outputs['delta_LUMO']  = X_inputs['LUMO_A'] - X_inputs['LUMO_D']
 
 # Scaling inputs
 scaler_inputs = StandardScaler()
@@ -171,3 +173,5 @@ df_pubchem_output = pd.concat([y_scaled.loc[common_pubchem], df_ci_final.loc[com
 
 df_pubchem.to_csv("Data_PubChem.csv", index=False, sep=';')
 df_pubchem_output.to_csv("Output_PubChem.csv", index=False, sep=";")
+
+print("Data Preparation")
