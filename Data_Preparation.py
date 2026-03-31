@@ -52,7 +52,7 @@ y_outputs['delta_LUMO']  = X_inputs['LUMO_A'] - X_inputs['LUMO_D']
 scaler_inputs = StandardScaler()
 X_scaled = pd.DataFrame(
     scaler_inputs.fit_transform(X_inputs),
-    columns=[f"scaled_{col}" for col in X_inputs.columns],
+    columns=[f"{col}" for col in X_inputs.columns],
     index=df_numerical.index
 )
 
@@ -60,18 +60,23 @@ X_scaled = pd.DataFrame(
 scaler_outputs = StandardScaler()
 y_scaled = pd.DataFrame(
     scaler_outputs.fit_transform(y_outputs),
-    columns=[f"scaled_{col}" for col in y_outputs.columns],
+    columns=[f"{col}" for col in y_outputs.columns],
     index=df_numerical.index
 )
 
 joblib.dump(scaler_outputs, "scaler_outputs.pkl")
 joblib.dump(scaler_inputs, "scaler_inputs.pkl")
 
+smiles_codes = df_full[['SMILES_acc', 'SMILES_don']]
+Data_scaled = pd.concat([smiles_codes,X_scaled, y_scaled], axis =1)
+
+Data_scaled.to_csv("Data_scaled.csv", index=False, sep=";")
+
 
 X_scaled.to_csv("Data_Compatibility_score.csv", index=False, sep=';')
 y_scaled.to_csv("Output_Compatibility_score.csv", index=False, sep=';')
 
-
+"""
 # SMILES code processing
 smiles_acceptor = df_full['SMILES_acc']
 smiles_donor = df_full['SMILES_don']
@@ -175,3 +180,4 @@ df_pubchem.to_csv("Data_PubChem.csv", index=False, sep=';')
 df_pubchem_output.to_csv("Output_PubChem.csv", index=False, sep=";")
 
 print("Data Preparation")
+"""
