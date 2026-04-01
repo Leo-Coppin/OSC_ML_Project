@@ -14,7 +14,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GINEConv, global_mean_pool, global_add_pool
 from torch_geometric.data import Data, Batch
-from smiles_to_graph import load_dataset
+from SMILES_to_Graph import load_dataset
 
 
 # =============================================================================
