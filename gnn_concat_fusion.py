@@ -8,7 +8,6 @@ import numpy as np
 import joblib
 from sklearn.preprocessing import StandardScaler
 
-# Importation de tes modules locaux
 from gnn_encoder import MolecularGNNEncoder, NODE_FEATURES, EDGE_FEATURES, EMBEDDING_DIM
 from SMILES_to_Graph import load_dataset 
 
@@ -17,7 +16,7 @@ from SMILES_to_Graph import load_dataset
 # =============================================================================
 
 class GNNConcatFusion(nn.Module):
-    def __init__(self, share_encoder=False, mlp_hidden=256, num_targets=6, dropout=0.2):
+    def __init__(self, share_encoder=False, mlp_hidden=256, num_targets=6, dropout=0.3):
         super().__init__()
 
         # Encodeur GIN (Graphes)
@@ -44,6 +43,12 @@ class GNNConcatFusion(nn.Module):
             nn.BatchNorm1d(mlp_hidden),
             nn.ReLU(),
             nn.Dropout(dropout),
+            
+            nn.Linear(mlp_hidden, mlp_hidden), 
+            nn.BatchNorm1d(mlp_hidden),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            
             nn.Linear(mlp_hidden, mlp_hidden // 2),
             nn.BatchNorm1d(mlp_hidden // 2),
             nn.ReLU(),
@@ -127,7 +132,7 @@ if __name__ == "__main__":
     CSV_PATH = "Data.csv" 
     MASTER_SPLIT_PATH = "master_split.csv" # Généré par ton script de synchro
     BATCH_SIZE = 32
-    LR = 1e-3
+    LR = 5e-4
     EPOCHS = 100
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     TARGET_NAMES = ['Voc', 'Jsc', 'FF', 'PCE', 'delta_LUMO', 'delta_HOMO']
@@ -165,7 +170,7 @@ if __name__ == "__main__":
 
     # 5. Initialisation et entraînement
     model = GNNConcatFusion(share_encoder=False, dropout=0.2).to(DEVICE)
-    optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10)
 
     print(f"🚀 Entraînement lancé sur {DEVICE}...")
@@ -179,7 +184,7 @@ if __name__ == "__main__":
         
         if test_mse < best_mse:
             best_mse = test_mse
-            torch.save(model.state_dict(), "best_gnn_model.pt")
+            torch.save(model.state_dict(), "best_gnn_concat_model.pt")
             
         if epoch % 10 == 0 or epoch == 1:
             print(f"Epoch {epoch:03d} | Loss: {train_loss:.4f} | Test MSE: {test_mse:.4f} | R2 Moyen: {np.mean(r2_list):.3f}")

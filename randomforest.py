@@ -107,4 +107,6 @@ print("="*40)
 # Optionnel : Sauvegarde du meilleur modèle
 # import joblib
 # joblib.dump(best_model, "best_mordred_optimized.joblib")
+
+# The optimized model gives a poorer score than the default one.
 '''
