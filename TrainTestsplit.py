@@ -1,4 +1,4 @@
-from sklearn.model_selection import GroupShuffleSplit
+'''from sklearn.model_selection import GroupShuffleSplit
 
 def validation(df, test_size=0.3, random_state=42,
                donor_col="SMILES_don", acceptor_col="SMILES_acc",
@@ -18,7 +18,6 @@ def validation(df, test_size=0.3, random_state=42,
     X = df.drop(columns=target_cols).copy()
     y = df[target_cols].copy()
 
-    '''Strict donor grouping'''
     #Group by "SMILES_don"
     groups = df[donor_col].astype(str)
 
@@ -38,3 +37,4 @@ def validation(df, test_size=0.3, random_state=42,
     
     
     return x_train, x_test, y_train, y_test
+'''
