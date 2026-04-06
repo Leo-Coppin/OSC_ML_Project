@@ -9,6 +9,8 @@ from torch import nn
 from torch_geometric.data import Batch
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+
 
 from GNN_Cross_Attention import GNNCrossAttentionModel
 from SMILES_to_Graph import load_dataset
@@ -46,10 +48,13 @@ set_seed()
 # ==============================
 
 print("Loading dataset...")
-dataset = load_dataset(CSV_PATH)
+# dataset = load_dataset(CSV_PATH)
 
-train_data, test_data = train_test_split(dataset, test_size=0.2, random_state=42)
-#train_data, val_data = train_test_split(train_data, test_size=0.1, random_state=42)
+# train_data, test_data = train_test_split(dataset, test_size=0.2, random_state=42)
+# #train_data, val_data = train_test_split(train_data, test_size=0.1, random_state=42)
+
+train_data = load_dataset("train_dataset.csv")
+test_data = load_dataset("test_dataset.csv")
 
 print("Train:", len(train_data))
 #print("Val:", len(val_data))
@@ -260,5 +265,114 @@ print("\nBest parameters")
 print(study.best_params)
 
 # sauvegarde best params
-with open("best_params.json", "w") as f:
-    json.dump(study.best_params, f, indent=4)
+# with open("best_params.json", "w") as f:
+    # json.dump(study.best_params, f, indent=4)
+    
+  
+# test model
+
+# dataset = load_dataset(CSV_PATH)
+
+# train_size = int(0.8 * len(dataset))
+# val_size = int(0.1 * len(dataset))
+# test_size = len(dataset) - train_size - val_size
+
+# train_data = dataset[:train_size]
+# val_data = dataset[train_size:train_size+val_size]
+# test_data = dataset[train_size+val_size:]
+
+
+
+test_loader = DataLoader(
+    test_data,
+    batch_size=16,
+    shuffle=False,
+    collate_fn=collate_fn
+)
+
+print("Test samples:", len(test_data))
+
+
+# =============================
+# LOAD MODEL
+# =============================
+
+checkpoint = torch.load("best_GNN1.pt", map_location=DEVICE)
+
+params = checkpoint["params"]
+
+print("\nBest parameters:")
+print(params)
+
+model = GNNCrossAttentionModel(
+    hidden_dim= params["hidden_dim"] * params["num_attn_heads"],
+    embedding_dim=params["embedding_dim"],
+    num_gnn_layers=params["num_gnn_layers"],
+    num_attn_heads=params["num_attn_heads"],
+    dropout=params["dropout"],
+    num_outputs=6,
+).to(DEVICE)
+
+model.load_state_dict(checkpoint["model_state_dict"])
+
+model.eval()
+
+print("\nModel loaded successfully")
+
+
+# =============================
+# TEST
+# =============================
+
+all_preds = []
+all_targets = []
+
+with torch.no_grad():
+
+    for graph_don, graph_acc, y in test_loader:
+
+        graph_don = graph_don.to(DEVICE)
+        graph_acc = graph_acc.to(DEVICE)
+        y = y.to(DEVICE)
+
+        preds = model(graph_don, graph_acc)
+
+        all_preds.append(preds.cpu().numpy())
+        all_targets.append(y.cpu().numpy())
+
+all_preds = np.vstack(all_preds)
+all_targets = np.vstack(all_targets)
+
+
+# =============================
+# METRICS
+# =============================
+
+mse = mean_squared_error(all_targets, all_preds)
+mae = mean_absolute_error(all_targets, all_preds)
+r2 = r2_score(all_targets, all_preds)
+
+print("\n===== GLOBAL METRICS =====")
+print("MSE:", mse)
+print("MAE:", mae)
+print("R2 :", r2)
+
+
+# =============================
+# METRICS PAR PROPRIÉTÉ
+# =============================
+
+names = ["PCE", "Voc", "Jsc", "FF", "dHOMO", "dLUMO"]
+
+print("\n===== METRICS PER PROPERTY =====")
+
+for i in range(6):
+
+    mse_i = mean_squared_error(all_targets[:, i], all_preds[:, i])
+    mae_i = mean_absolute_error(all_targets[:, i], all_preds[:, i])
+    r2_i = r2_score(all_targets[:, i], all_preds[:, i])
+
+    print(f"\n{names[i]}")
+    print("MSE:", mse_i)
+    print("MAE:", mae_i)
+    print("R2 :", r2_i)
