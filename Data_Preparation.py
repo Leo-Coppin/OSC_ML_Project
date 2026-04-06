@@ -181,3 +181,115 @@ df_pubchem_output.to_csv("Output_PubChem.csv", index=False, sep=";")
 
 print("Data Preparation")
 """
+
+# Prepare train and test sets for ML Models (Linear Regression, etc)
+data_train = pd.read_csv("train_dataset.csv", sep=';')
+data_test = pd.read_csv("test_dataset.csv", sep=';')
+
+smiles_acceptor_train = data_train['SMILES_acc']
+smiles_acceptor_test = data_test['SMILES_acc']
+smiles_donor_train = data_train['SMILES_don']
+smiles_donor_test = data_test['SMILES_don']  
+
+# # RDKit 
+rdkit_list_acceptor_train = []
+rdkit_list_acceptor_test = []
+rdkit_list_donor_train = []
+rdkit_list_donor_test = []
+
+for smile in smiles_acceptor_train :
+    rdkit_list_acceptor_train.append(SMILES_functions.get_rdkit_descriptors(smile))
+for smile in smiles_acceptor_test :
+    rdkit_list_acceptor_test.append(SMILES_functions.get_rdkit_descriptors(smile))
+for smile in smiles_donor_train : 
+    rdkit_list_donor_train.append(SMILES_functions.get_rdkit_descriptors(smile))
+for smile in smiles_donor_test : 
+    rdkit_list_donor_test.append(SMILES_functions.get_rdkit_descriptors(smile))
+    
+df_rdkit_acceptor_train = pd.DataFrame(rdkit_list_acceptor_train, index=data_train.index)
+df_rdkit_acceptor_train.columns=[f"rdkit_acceptor_{c}" for c in df_rdkit_acceptor_train.columns]
+df_rdkit_donor_train = pd.DataFrame(rdkit_list_donor_train, index=data_train.index)
+df_rdkit_donor_train.columns=[f"rdkit_donor_{c}" for c in df_rdkit_donor_train.columns]
+
+df_rdkit_acceptor_test = pd.DataFrame(rdkit_list_acceptor_test, index=data_test.index)
+df_rdkit_acceptor_test.columns=[f"rdkit_acceptor_{c}" for c in df_rdkit_acceptor_test.columns]
+df_rdkit_donor_test = pd.DataFrame(rdkit_list_donor_test, index=data_test.index)
+df_rdkit_donor_test.columns=[f"rdkit_donor_{c}" for c in df_rdkit_donor_test.columns]
+
+df_rdkit_train = pd.concat([df_rdkit_acceptor_train, df_rdkit_donor_train], axis=1)#.dropna()
+df_rdkit_test = pd.concat([df_rdkit_acceptor_test, df_rdkit_donor_test], axis=1)#.dropna()
+
+df_rdkit_train.to_csv("Data_RDKit_train.csv", index=False, sep=';')
+df_rdkit_test.to_csv("Data_RDKit_test.csv", index=False, sep=';')
+
+# # mordred
+# print("Mordred Descriptors")
+# df_mordred_acc_train = SMILES_functions.get_mordred_descriptors(smiles_acceptor_train)
+# df_mordred_don_train = SMILES_functions.get_mordred_descriptors(smiles_donor_train)
+# df_mordred_acc_train.columns = [f"mordred_acceptor_{c}" for c in df_mordred_acc_train.columns]
+# df_mordred_don_train.columns = [f"mordred_donor_{c}" for c in df_mordred_don_train.columns]
+
+# df_mordred_acc_test = SMILES_functions.get_mordred_descriptors(smiles_acceptor_test)
+# df_mordred_don_test = SMILES_functions.get_mordred_descriptors(smiles_donor_test)
+# df_mordred_acc_test.columns = [f"mordred_acceptor_{c}" for c in df_mordred_acc_test.columns]
+# df_mordred_don_test.columns = [f"mordred_donor_{c}" for c in df_mordred_don_test.columns]
+
+# df_mordred_train = pd.concat([df_mordred_acc_train, df_mordred_don_train], axis=1).dropna()
+# df_mordred_test = pd.concat([df_mordred_acc_test, df_mordred_don_test], axis=1).dropna()
+
+# df_mordred_train.to_csv("Data_Mordred_train.csv", index=False, sep=';')
+# df_mordred_test.to_csv("Data_Mordred_test.csv", index=False, sep=';')
+
+# # Morgan
+# print("Morgan Fingerprints")
+# morgan_matrix_acc_train = np.vstack([SMILES_functions.get_morgan_fingerprint(s) for s in smiles_acceptor_train])
+# df_morgan_acc_train = pd.DataFrame(morgan_matrix_acc_train, index=data_train.index, columns=[f"morgan_acc_{i}" for i in range(morgan_matrix_acc_train.shape[1])])
+# morgan_matrix_don_train = np.vstack([SMILES_functions.get_morgan_fingerprint(s) for s in smiles_donor_train])
+# df_morgan_don_train = pd.DataFrame(morgan_matrix_don_train, index=data_train.index, columns=[f"morgan_don_{i}" for i in range(morgan_matrix_don_train.shape[1])])
+
+# morgan_matrix_acc_test = np.vstack([SMILES_functions.get_morgan_fingerprint(s) for s in smiles_acceptor_test])
+# df_morgan_acc_test = pd.DataFrame(morgan_matrix_acc_test, index=data_test.index, columns=[f"morgan_acc_{i}" for i in range(morgan_matrix_acc_test.shape[1])])
+# morgan_matrix_don_test = np.vstack([SMILES_functions.get_morgan_fingerprint(s) for s in smiles_donor_test])
+# df_morgan_don_test = pd.DataFrame(morgan_matrix_don_test, index=data_test.index, columns=[f"morgan_don_{i}" for i in range(morgan_matrix_don_test.shape[1])])
+
+# df_morgan_train = pd.concat([df_morgan_acc_train, df_morgan_don_train], axis=1).dropna()
+# df_morgan_test = pd.concat([df_morgan_acc_test, df_morgan_don_test], axis=1).dropna()
+
+# df_morgan_train.to_csv("Data_Morgan_train.csv", index=False, sep=';')
+# df_morgan_test.to_csv("Data_Morgan_test.csv", index=False, sep=';')
+
+# # MACCS
+# print("MACCS Keys Fingerprints")
+# maccs_matrix_acc_train = np.vstack([SMILES_functions.get_maccs_fingerprint(s) for s in smiles_acceptor_train])
+# df_maccs_acc_train = pd.DataFrame(maccs_matrix_acc_train, index=data_train.index, columns=[f"maccs_acc_{i}" for i in range(maccs_matrix_acc_train.shape[1])])
+# maccs_matrix_don_train = np.vstack([SMILES_functions.get_maccs_fingerprint(s) for s in smiles_donor_train])
+# df_maccs_don_train = pd.DataFrame(maccs_matrix_don_train, index=data_train.index, columns=[f"maccs_don_{i}" for i in range(maccs_matrix_don_train.shape[1])])
+
+# maccs_matrix_acc_test = np.vstack([SMILES_functions.get_maccs_fingerprint(s) for s in smiles_acceptor_test])
+# df_maccs_acc_test = pd.DataFrame(maccs_matrix_acc_test, index=data_test.index, columns=[f"maccs_acc_{i}" for i in range(maccs_matrix_acc_test.shape[1])])
+# maccs_matrix_don_test = np.vstack([SMILES_functions.get_maccs_fingerprint(s) for s in smiles_donor_test])
+# df_maccs_don_test = pd.DataFrame(maccs_matrix_don_test, index=data_test.index, columns=[f"maccs_don_{i}" for i in range(maccs_matrix_don_test.shape[1])])
+
+# df_maccs_train = pd.concat([df_maccs_acc_train, df_maccs_don_train], axis=1).dropna()
+# df_maccs_test = pd.concat([df_maccs_acc_test, df_maccs_don_test], axis=1).dropna()
+
+# df_maccs_train.to_csv("Data_MACCS_train.csv", index=False, sep=';')
+# df_maccs_test.to_csv("Data_MACCS_test.csv", index=False, sep=";")
+
+# PubChem 
+print("PubChem Fingerprints")
+pc_matrix_acc_train = np.vstack([SMILES_functions.get_pubchem_fingerprint(s) for s in smiles_acceptor_train])
+df_pc_acc_train = pd.DataFrame(pc_matrix_acc_train, index=data_train.index, columns=[f"pubchem_acc_{i}" for i in range(pc_matrix_acc_train.shape[1])])
+pc_matrix_don_train = np.vstack([SMILES_functions.get_pubchem_fingerprint(s) for s in smiles_donor_train])
+df_pc_don_train = pd.DataFrame(pc_matrix_don_train, index=data_train.index, columns=[f"pubchem_don_{i}" for i in range(pc_matrix_don_train.shape[1])])
+
+pc_matrix_acc_test = np.vstack([SMILES_functions.get_pubchem_fingerprint(s) for s in smiles_acceptor_test])
+df_pc_acc_test = pd.DataFrame(pc_matrix_acc_test, index=data_test.index, columns=[f"pubchem_acc_{i}" for i in range(pc_matrix_acc_test.shape[1])])
+pc_matrix_don_test = np.vstack([SMILES_functions.get_pubchem_fingerprint(s) for s in smiles_donor_test])
+df_pc_don_test = pd.DataFrame(pc_matrix_don_test, index=data_test.index, columns=[f"pubchem_don_{i}" for i in range(pc_matrix_don_test.shape[1])])
+
+df_pubchem_train = pd.concat([df_pc_acc_train, df_pc_don_train], axis=1).dropna()
+df_pubchem_test = pd.concat([df_pc_acc_test, df_pc_don_test], axis=1).dropna()
+
+df_pubchem_train.to_csv("Data_PubChem_train.csv", index=False, sep=';')
+df_pubchem_test.to_csv("Data_PubChem_test.csv", index=False, sep=';')
