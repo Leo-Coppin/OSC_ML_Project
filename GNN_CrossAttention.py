@@ -17,7 +17,7 @@ from gnn_encoder import MolecularGNNEncoder, NODE_FEATURES, EDGE_FEATURES, HIDDE
 from SMILES_to_Graph import load_dataset
 
 import optuna
-
+ 
 # =============================================================================
 # 1. MODULE CROSS-ATTENTION
 # =============================================================================

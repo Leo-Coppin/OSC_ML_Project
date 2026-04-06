@@ -1,7 +1,11 @@
 import os
 import re
 
-mordred_path = r"C:\ProgramData\anaconda3\envs\osc_ml\Lib\site-packages\mordred"
+#Windows path to Mordred package - adjust if needed
+#mordred_path = r"C:\ProgramData\anaconda3\envs\osc_ml\Lib\site-packages\mordred"
+
+#Linux path to Mordred package - adjust if needed
+mordred_path = "/home/lemo/miniconda3/envs/osc_ml/lib/python3.11/site-packages/mordred"
 
 # Remplacements nécessaires numpy 1.x -> 2.x
 replacements = {

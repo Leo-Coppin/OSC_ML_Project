@@ -128,17 +128,19 @@ def load_dataset(csv_path):
     df = pd.read_csv(csv_path, sep=';', on_bad_lines='warn')
 
     # Conversion forcée des colonnes numériques (gère les virgules ET les points)
-    cols_to_convert = ['HOMO_A', 'LUMO_A', 'HOMO_D', 'LUMO_D', 'PCE', 'Voc', 'Jsc', 'FF']
+    #cols_to_convert = ['HOMO_A', 'LUMO_A', 'HOMO_D', 'LUMO_D', 'PCE', 'Voc', 'Jsc', 'FF']
+    cols_to_convert = ['PCE', 'Voc', 'Jsc', 'FF', 'delta_HOMO', 'delta_LUMO']
     for col in cols_to_convert:
         df[col] = df[col].astype(str).str.replace(',', '.', regex=False)
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
     # Calcul de ΔHOMO et ΔLUMO
-    df['ΔHOMO'] = df['HOMO_A'] - df['HOMO_D']
-    df['ΔLUMO'] = df['LUMO_A'] - df['LUMO_D']
+    # df['ΔHOMO'] = df['HOMO_A'] - df['HOMO_D']
+    # df['ΔLUMO'] = df['LUMO_A'] - df['LUMO_D']
 
-    target_columns = ['PCE', 'Voc', 'Jsc', 'FF', 'ΔHOMO', 'ΔLUMO']
-
+    #target_columns = ['PCE', 'Voc', 'Jsc', 'FF', 'ΔHOMO', 'ΔLUMO']
+    target_columns = ['PCE', 'Voc', 'Jsc', 'FF', 'delta_HOMO', 'delta_LUMO']
+    
     # Supprime les lignes avec des valeurs manquantes
     df = df.dropna(subset=['SMILES_don', 'SMILES_acc'] + target_columns)
 

@@ -13,7 +13,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 from GNN_CrossAttention import GNNCrossAttentionModel
 from SMILES_to_Graph import load_dataset
-
+ 
 # ==============================
 # CONFIG
 # ==============================
@@ -47,10 +47,8 @@ set_seed()
 # ==============================
 
 print("Loading dataset...")
-dataset = load_dataset(CSV_PATH)
-
-train_data, test_data = train_test_split(dataset, test_size=0.2, random_state=42)
-#train_data, val_data = train_test_split(train_data, test_size=0.1, random_state=42)
+train_data = load_dataset('train_dataset.csv')
+test_data = load_dataset('test_dataset.csv')
 
 print("Train:", len(train_data))
 #print("Val:", len(val_data))
@@ -235,7 +233,7 @@ def objective(trial):
                 "params": trial.params,
                 "val_loss": val_loss,
                 "epoch": epoch
-            }, "best_GNN1.pt")
+            }, "best_GNN_CrossAttention.pt")
         print(f"\nNew best model saved with val_loss={best_val:.4f} at epoch {epoch} with params: {trial.params}")
 
     return best_val
@@ -245,17 +243,17 @@ def objective(trial):
 # RUN OPTUNA
 # ==============================
 
-# study = optuna.create_study(
-#     direction="minimize",
-#     sampler=optuna.samplers.TPESampler(),
-#     pruner=optuna.pruners.MedianPruner(
-#         n_startup_trials=10,
-#         n_warmup_steps=50,
-#         interval_steps=5
-#     )
-# )
+study = optuna.create_study(
+    direction="minimize",
+    sampler=optuna.samplers.TPESampler(),
+    pruner=optuna.pruners.MedianPruner(
+        n_startup_trials=10,
+        n_warmup_steps=50,
+        interval_steps=5
+    )
+)
 
-# study.optimize(objective, n_trials=N_TRIALS, show_progress_bar=True)
+#study.optimize(objective, n_trials=N_TRIALS, show_progress_bar=True)
 
 print("\nBest parameters")
 #print(study.best_params)
@@ -267,15 +265,8 @@ print("\nBest parameters")
   
 # test model
 
-dataset = load_dataset(CSV_PATH)
-
-train_size = int(0.8 * len(dataset))
-val_size = int(0.1 * len(dataset))
-test_size = len(dataset) - train_size - val_size
-
-train_data = dataset[:train_size]
-val_data = dataset[train_size:train_size+val_size]
-test_data = dataset[train_size+val_size:]
+train_data = load_dataset('train_dataset.csv')
+test_data = load_dataset('test_dataset.csv')
 
 test_loader = DataLoader(
     test_data,
@@ -291,7 +282,7 @@ print("Test samples:", len(test_data))
 # LOAD MODEL
 # =============================
 
-checkpoint = torch.load("best_GNN1.pt", map_location=DEVICE)
+checkpoint = torch.load("best_GNN_CrossAttention.pt", map_location=DEVICE)
 
 params = checkpoint["params"]
 
