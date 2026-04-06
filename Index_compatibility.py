@@ -19,7 +19,7 @@ def check_validity(row):
         return False
 
 # Chargement du fichier source
-df = pd.read_csv("Data.csv", sep=";")
+df = pd.read_csv("Data_scaled.csv", sep=";")
 
 # 1. On identifie les lignes techniquement valides pour le GNN
 print("🔍 Vérification de la compatibilité des SMILES...")
@@ -27,13 +27,26 @@ df['valid'] = df.apply(check_validity, axis=1)
 df_clean = df[df['valid'] == True].copy()
 
 # 2. On croise avec tes fichiers de descripteurs existants (Intersection)
-# On charge l'index d'un de tes CSV (ex: MACCS) pour être sûr qu'ils ont aussi ces lignes
+# On charge l'index de tous les CSV pour être sûr qu'ils ont aussi ces lignes
+df_rdkit = pd.read_csv("Data_RDKit.csv", sep=";")
+df_mordred = pd.read_csv("Data_Mordred.csv", sep=";")
+df_morgan = pd.read_csv("Data_Morgan.csv", sep=";")
 df_maccs = pd.read_csv("Data_MACCS.csv", sep=";")
+df_pubchem = pd.read_csv("Data_PubChem.csv", sep=";")
+
+common_index = df_clean.index.intersection(df_rdkit.index)
+df_clean = df_clean.loc[common_index]
+common_index = df_clean.index.intersection(df_mordred.index)
+df_clean = df_clean.loc[common_index]
+common_index = df_clean.index.intersection(df_morgan.index)
+df_clean = df_clean.loc[common_index]
 common_index = df_clean.index.intersection(df_maccs.index)
+df_clean = df_clean.loc[common_index]
+common_index = df_clean.index.intersection(df_pubchem.index)
 df_final = df_clean.loc[common_index]
 
 # 3. Création du Split par Donneur 
-gss = GroupShuffleSplit(n_splits=1, test_size=0.14, random_state=42)
+gss = GroupShuffleSplit(n_splits=1, test_size=0.35, random_state=42)
 train_idx, test_idx = next(gss.split(df_final, groups=df_final['SMILES_don']))
 
 split_df = pd.DataFrame(index=df_final.index)
