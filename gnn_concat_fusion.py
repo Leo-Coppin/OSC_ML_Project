@@ -129,41 +129,43 @@ def evaluate(model, loader, device):
 
 if __name__ == "__main__":
     # Paramètres
-    CSV_PATH = "Data.csv" 
-    MASTER_SPLIT_PATH = "master_split.csv" # Généré par ton script de synchro
+    # CSV_PATH = "Data.csv" 
+    # MASTER_SPLIT_PATH = "master_split.csv" # Généré par ton script de synchro
     BATCH_SIZE = 32
     LR = 5e-4
     EPOCHS = 100
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     TARGET_NAMES = ['Voc', 'Jsc', 'FF', 'PCE', 'delta_LUMO', 'delta_HOMO']
 
-    # 1. Chargement des Graphes
-    print("⏳ Étape 1 : Chargement et conversion des SMILES en graphes...")
-    all_raw_data = load_dataset(CSV_PATH)
+    # # 1. Chargement des Graphes
+    # print("⏳ Étape 1 : Chargement et conversion des SMILES en graphes...")
+    # all_raw_data = load_dataset(CSV_PATH)
     
-    # 2. Alignement sur le MASTER SPLIT (L'arbitre du duel)
-    print(f"🎯 Étape 2 : Alignement sur {MASTER_SPLIT_PATH}...")
-    master_split = pd.read_csv(MASTER_SPLIT_PATH, sep=";", index_col=0)
+    # # 2. Alignement sur le MASTER SPLIT (L'arbitre du duel)
+    # print(f"🎯 Étape 2 : Alignement sur {MASTER_SPLIT_PATH}...")
+    # master_split = pd.read_csv(MASTER_SPLIT_PATH, sep=";", index_col=0)
     
-    # On ne garde que les indices validés par le script de synchro
-    sync_data = [all_raw_data[i] for i in master_split.index]
+    # # On ne garde que les indices validés par le script de synchro
+    # sync_data = [all_raw_data[i] for i in master_split.index]
     
-    # 3. Normalisation des cibles (uniquement les 6 colonnes physiques)
-    print("⚖️ Étape 3 : Normalisation des cibles...")
-    all_y = np.array([d['y'].numpy() for d in sync_data])
-    all_y = all_y[:, :6] # On ignore Target_CI (7ème colonne éventuelle)
+    # # 3. Normalisation des cibles (uniquement les 6 colonnes physiques)
+    # print("⚖️ Étape 3 : Normalisation des cibles...")
+    # all_y = np.array([d['y'].numpy() for d in sync_data])
+    # all_y = all_y[:, :6] # On ignore Target_CI (7ème colonne éventuelle)
     
-    scaler = StandardScaler()
-    all_y_norm = scaler.fit_transform(all_y)
+    # scaler = StandardScaler()
+    # all_y_norm = scaler.fit_transform(all_y)
     
-    for i, data_dict in enumerate(sync_data):
-        data_dict['y_norm'] = torch.tensor(all_y_norm[i], dtype=torch.float)
+    # for i, data_dict in enumerate(sync_data):
+    #     data_dict['y_norm'] = torch.tensor(all_y_norm[i], dtype=torch.float)
     
-    joblib.dump(scaler, "scaler_gnn.pkl")
+    # joblib.dump(scaler, "scaler_gnn.pkl")
 
-    # 4. Création des loaders (Train 70% / Test 30%)
-    train_raw = [d for i, d in enumerate(sync_data) if master_split.iloc[i]['set'] == 'train']
-    test_raw = [d for i, d in enumerate(sync_data) if master_split.iloc[i]['set'] == 'test']
+    # # 4. Création des loaders (Train 70% / Test 30%)
+    # train_raw = [d for i, d in enumerate(sync_data) if master_split.iloc[i]['set'] == 'train']
+    # test_raw = [d for i, d in enumerate(sync_data) if master_split.iloc[i]['set'] == 'test']
+    train_raw = load_dataset('train_dataset.csv')
+    test_raw = load_dataset('test_dataset.csv')
 
     train_loader = DataLoader(DonorAcceptorDataset(train_raw), batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate_pairs)
     test_loader = DataLoader(DonorAcceptorDataset(test_raw), batch_size=BATCH_SIZE, collate_fn=collate_pairs)
