@@ -734,7 +734,7 @@ if __name__ == "__main__":
  
     run_full_analysis(
         dataset_path_test = "test_dataset.csv",
-        checkpoint_concat = "best_gnn_model.pt",
+        checkpoint_concat = "best_gnn_concat_model.pt",
         checkpoint_cross  = "best_GNN_CrossAttention.pt",
         target_idx        = 0,      # 0 = PCE (changer pour les autres cibles)
         sample_idx        = 0,      # paire à analyser avec GNNExplainer

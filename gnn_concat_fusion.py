@@ -129,49 +129,47 @@ def evaluate(model, loader, device):
 
 if __name__ == "__main__":
     # Paramètres
-    # CSV_PATH = "Data.csv" 
-    # MASTER_SPLIT_PATH = "master_split.csv" # Généré par ton script de synchro
+    # On utilise maintenant les fichiers générés par ton script de préparation
+    TRAIN_CSV = "train_dataset.csv"
+    TEST_CSV = "test_dataset.csv"
+    
     BATCH_SIZE = 32
     LR = 5e-4
     EPOCHS = 100
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    TARGET_NAMES = ['Voc', 'Jsc', 'FF', 'PCE', 'delta_LUMO', 'delta_HOMO']
+    TARGET_NAMES = ['Voc', 'Jsc', 'FF', 'PCE', 'delta_HOMO', 'delta_LUMO']
 
-    # # 1. Chargement des Graphes
-    # print("⏳ Étape 1 : Chargement et conversion des SMILES en graphes...")
-    # all_raw_data = load_dataset(CSV_PATH)
+    # 1. Chargement et conversion des SMILES en graphes
+    print("⏳ Étape 1 : Chargement des datasets séparés...")
+    train_raw = load_dataset(TRAIN_CSV)
+    test_raw = load_dataset(TEST_CSV)
     
-    # # 2. Alignement sur le MASTER SPLIT (L'arbitre du duel)
-    # print(f"🎯 Étape 2 : Alignement sur {MASTER_SPLIT_PATH}...")
-    # master_split = pd.read_csv(MASTER_SPLIT_PATH, sep=";", index_col=0)
+    # 2. Normalisation des cibles
+    # On concatène temporairement pour fitter le scaler sur l'ensemble du TRAIN
+    print("⚖️ Étape 2 : Normalisation des cibles...")
     
-    # # On ne garde que les indices validés par le script de synchro
-    # sync_data = [all_raw_data[i] for i in master_split.index]
+    train_y = np.array([d['y'].numpy() for d in train_raw])
+    test_y = np.array([d['y'].numpy() for d in test_raw])
     
-    # # 3. Normalisation des cibles (uniquement les 6 colonnes physiques)
-    # print("⚖️ Étape 3 : Normalisation des cibles...")
-    # all_y = np.array([d['y'].numpy() for d in sync_data])
-    # all_y = all_y[:, :6] # On ignore Target_CI (7ème colonne éventuelle)
+    scaler = StandardScaler()
+    # On fit le scaler UNIQUEMENT sur le train pour éviter le data leakage
+    train_y_norm = scaler.fit_transform(train_y)
+    test_y_norm = scaler.transform(test_y)
     
-    # scaler = StandardScaler()
-    # all_y_norm = scaler.fit_transform(all_y)
-    
-    # for i, data_dict in enumerate(sync_data):
-    #     data_dict['y_norm'] = torch.tensor(all_y_norm[i], dtype=torch.float)
+    # Ré-injection des cibles normalisées dans les dictionnaires
+    for i, data_dict in enumerate(train_raw):
+        data_dict['y_norm'] = torch.tensor(train_y_norm[i], dtype=torch.float)
+    for i, data_dict in enumerate(test_raw):
+        data_dict['y_norm'] = torch.tensor(test_y_norm[i], dtype=torch.float)
     
     # joblib.dump(scaler, "scaler_gnn.pkl")
 
-    # # 4. Création des loaders (Train 70% / Test 30%)
-    # train_raw = [d for i, d in enumerate(sync_data) if master_split.iloc[i]['set'] == 'train']
-    # test_raw = [d for i, d in enumerate(sync_data) if master_split.iloc[i]['set'] == 'test']
-    train_raw = load_dataset('train_dataset.csv')
-    test_raw = load_dataset('test_dataset.csv')
-
+    # 3. Création des loaders
     train_loader = DataLoader(DonorAcceptorDataset(train_raw), batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate_pairs)
     test_loader = DataLoader(DonorAcceptorDataset(test_raw), batch_size=BATCH_SIZE, collate_fn=collate_pairs)
 
-    # 5. Initialisation et entraînement
-    model = GNNConcatFusion(share_encoder=False, dropout=0.2).to(DEVICE)
+    # 4. Initialisation du modèle 
+    model = GNNConcatFusion(share_encoder=False, mlp_hidden=256, dropout=0.5).to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10)
 
@@ -191,11 +189,12 @@ if __name__ == "__main__":
         if epoch % 10 == 0 or epoch == 1:
             print(f"Epoch {epoch:03d} | Loss: {train_loss:.4f} | Test MSE: {test_mse:.4f} | R2 Moyen: {np.mean(r2_list):.3f}")
 
-    # 6. Verdict Final
+    # 5. Verdict Final
     print("\n" + "="*30)
     print("🏆 RÉSULTATS FINAUX DU GNN")
     print("="*30)
-    model.load_state_dict(torch.load("best_gnn_model.pt"))
+    # On recharge le meilleur modèle sauvegardé
+    model.load_state_dict(torch.load("best_gnn_concat_model.pt"))
     _, final_r2 = evaluate(model, test_loader, DEVICE)
     
     for name, r2 in zip(TARGET_NAMES, final_r2):
@@ -203,5 +202,4 @@ if __name__ == "__main__":
     
     print("-" * 30)
     print(f"Moyenne R² GNN : {np.mean(final_r2):.3f}")
-    print(f"Baseline à battre (Mordred) : 0.387")
     print("="*30)
