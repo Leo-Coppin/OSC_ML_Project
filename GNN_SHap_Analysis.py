@@ -442,7 +442,7 @@ class KernelSHAPAnalysis:
             [f"acc_{n}" for n in Atom_Feature_Names]
         )
  
-        print(f"  ✅ SHAP calculé — shape : {shap_values.shape}")
+        print(f"SHAP calculated — shape : {shap_values.shape}")
         return shap_values, feature_names, X_explain
  
     # -------------------------------------------------------------------------
@@ -522,6 +522,7 @@ def compare_models_shap(
     n_background: int = 50,
     n_explain: int = 30,
     save_dir: str = ".",
+    model_results : list = None,  # optionnel : résultats déjà calculés pour éviter de relancer SHAP
 ):
     """
     Lance KernelSHAP sur les deux modèles et compare les importances.
@@ -533,10 +534,14 @@ def compare_models_shap(
     print(f"\n📊 Comparaison SHAP — cible : {target_name}")
  
     results = {}
-    for model, name in [(model_concat, "concat"), (model_cross, "cross_attention")]:
-        analyser = KernelSHAPAnalysis(model, name, target_idx)
-        sv, feat_names, X_ex = analyser.run(dataset, n_background, n_explain)
-        results[name] = {"shap_values": sv, "feature_names": feat_names}
+    if model_results is None:
+        for model, name in [(model_concat, "concat"), (model_cross, "cross_attention")]:
+            analyser = KernelSHAPAnalysis(model, name, target_idx)
+            sv, feat_names, X_ex = analyser.run(dataset, n_background, n_explain)
+            results[name] = {"shap_values": sv, "feature_names": feat_names}
+    else:
+        for name, res in model_results:
+            results[name] = res
  
     # Importance moyenne |SHAP| pour chaque modèle
     imp_concat = np.abs(results["concat"]["shap_values"]).mean(axis=0)
@@ -575,31 +580,17 @@ def compare_models_shap(
 # =============================================================================
  
 def run_full_analysis(
-    dataset_path_test: str,
-    checkpoint_concat: str,
-    checkpoint_cross:  str,
-    target_idx:        int = 0,      # 0=PCE, 1=Voc, 2=Jsc, 3=FF, 4=delta_HOMO, 5=delta_LUMO
-    sample_idx:        int = 0,      # index de la paire à expliquer avec GNNExplainer
-    n_background:      int = 50,
-    n_explain:         int = 30,
-    save_dir:          str = "shap_results",
-    concat_params:     dict = None,  # paramètres du modèle concat si nécessaire
-    cross_params:      dict = None,  # paramètres du modèle cross-attention (chargés depuis checkpoint)
+    dataset_path_test: str,         #path to test_dataset.csv
+    checkpoint_concat: str,         #path to best_gnn_concat_model.pt
+    checkpoint_cross:  str,         #path to best_GNN_CrossAttention.pt
+    target_idx:        int = 0,     # 0=PCE, 1=Voc, 2=Jsc, 3=FF, 4=delta_HOMO, 5=delta_LUMO
+    n_background:      int = 50,    # number of samples for kernelSHAP
+    n_explain:         int = 30,    # number of samples to explain
+    save_dir:          str = "shap_GNN_results",
+    concat_params:     dict = None, # paramètres du modèle concat si nécessaire
+    cross_params:      dict = None, # paramètres du modèle cross-attention (chargés depuis checkpoint)
 ):
-    """
-    Pipeline complète : charge les modèles, lance GNNExplainer + KernelSHAP.
- 
-    Args:
-        dataset_path_test : chemin vers le CSV de test
-        checkpoint_concat : chemin vers best_gnn_concat_model.pt
-        checkpoint_cross  : chemin vers best_GNN_CrossAttention.pt
-        target_idx        : index de la propriété cible
-        sample_idx        : indice de la molécule à analyser avec GNNExplainer
-        n_background      : échantillons de fond pour KernelSHAP
-        n_explain         : échantillons à expliquer avec KernelSHAP
-        save_dir          : dossier de sauvegarde des figures
-        cross_params      : dict des hyperparamètres du modèle cross-attention
-    """
+    #if it doesn't exist, create the directory to save the results
     import os
     os.makedirs(save_dir, exist_ok=True)
  
@@ -607,19 +598,15 @@ def run_full_analysis(
     print(f"  SHAP Analysis — cible : {outputs[target_idx]}")
     print("=" * 60)
  
-    # ------------------------------------------------------------------
-    # 1. Chargement du dataset
-    # ------------------------------------------------------------------
-    print("\n📂 Chargement du dataset de test...")
+    # charge Dataset
+    print("\nOpening test dataset...")
     dataset = load_dataset(dataset_path_test)
-    print(f"   {len(dataset)} paires chargées.")
+    print(f"   {len(dataset)} pairs ready.")
  
-    # ------------------------------------------------------------------
-    # 2. Chargement des modèles
-    # ------------------------------------------------------------------
-    print("\n⚙️  Chargement des modèles...")
+    # Opening Models
+    print("\nOpening models...")
  
-    # --- Modèle Concat ---
+    # --- Concat model ---
     model_concat = GNNConcatFusion(share_encoder=False, dropout=0.2)
     state = torch.load(checkpoint_concat, map_location=DEVICE)
     # Gère les checkpoints avec ou sans wrapper
@@ -628,9 +615,9 @@ def run_full_analysis(
     else:
         model_concat.load_state_dict(state)
     model_concat.to(DEVICE).eval()
-    print("   ✅ Modèle Concat chargé.")
+    print("Concat model loaded.")
  
-    # --- Modèle Cross-Attention ---
+    # --- Cross-Attention model ---
     ckpt_cross = torch.load(checkpoint_cross, map_location=DEVICE)
     if cross_params is None:
         cross_params = ckpt_cross.get("params", {})
@@ -650,56 +637,14 @@ def run_full_analysis(
     )
     model_cross.load_state_dict(ckpt_cross["model_state_dict"])
     model_cross.to(DEVICE).eval()
-    print("   ✅ Modèle Cross-Attention chargé.")
- 
-    # ------------------------------------------------------------------
-    # 3. GNNExplainer — explication locale sur un exemple
-    # ------------------------------------------------------------------
-    print(f"\n🔬 GNNExplainer — paire n°{sample_idx}...")
- 
-    sample    = dataset[sample_idx]
-    graph_don = sample['graph_donor'].clone()
-    graph_acc = sample['graph_acceptor'].clone()
-    smiles_don = sample['smiles_don']
-    smiles_acc = sample['smiles_acc']
- 
-    print(f"   Donneur  : {smiles_don}")
-    print(f"   Accepteur: {smiles_acc}")
- 
-    for model, name in [(model_concat, "concat"), (model_cross, "cross_attention")]:
-        print(f"\n   → {name}")
-        analyser = GNNExplainerAnalysis(model, name, target_idx)
-        results  = analyser.explain_pair(graph_don.clone(), graph_acc.clone(),
-                                         smiles_don, smiles_acc)
- 
-        for role in ["donor", "acceptor"]:
-            r    = results[role]
-            smil = r["smiles"]
- 
-            # Visualisation molécule colorée
-            analyser.visualize_molecule_importance(
-                smiles          = smil,
-                node_importance = r["node_importance"],
-                edge_importance = r["edge_importance"],
-                graph           = r["graph"],
-                title           = f"{name} — {role} — {outputs[target_idx]}",
-                save_path       = f"{save_dir}/gnnexplainer_{name}_{role}_{outputs[target_idx]}.png",
-            )
- 
-            # Barplot top atomes
-            GNNExplainerAnalysis.plot_top_atoms(
-                smiles          = smil,
-                node_importance = r["node_importance"],
-                top_k           = 10,
-                title           = f"Top atomes — {name} — {role} — {outputs[target_idx]}",
-                save_path       = f"{save_dir}/top_atoms_{name}_{role}_{outputs[target_idx]}.png",
-            )
+    print("  Cross-Attention model loaded.")
  
     # ------------------------------------------------------------------
     # 4. KernelSHAP — importance globale des features
     # ------------------------------------------------------------------
-    print(f"\n🧮 KernelSHAP — importance des features atomiques...")
+    print(f"\nKernelSHAP — Atomic features importance...")
  
+    model_results = []
     for model, name in [(model_concat, "concat"), (model_cross, "cross_attention")]:
         analyser = KernelSHAPAnalysis(model, name, target_idx)
         sv, feat_names, X_ex = analyser.run(dataset, n_background, n_explain)
@@ -709,10 +654,9 @@ def run_full_analysis(
  
         analyser.plot_bar(sv, feat_names,
                           save_path=f"{save_dir}/shap_bar_{name}_{outputs[target_idx]}.png")
- 
-    # ------------------------------------------------------------------
-    # 5. Comparaison des deux modèles
-    # ------------------------------------------------------------------
+        model_results.append((name, {"shap_values": sv, "feature_names": feat_names}))
+        
+    # Comparing the two models
     compare_models_shap(
         model_concat  = model_concat,
         model_cross   = model_cross,
@@ -721,9 +665,10 @@ def run_full_analysis(
         n_background  = n_background,
         n_explain     = n_explain,
         save_dir      = save_dir,
+        model_results = model_results
     )
  
-    print(f"\n✅ Analyse SHAP terminée ! Figures sauvegardées dans '{save_dir}/'")
+    print(f"\n✅ Shap Analysis finished ! Figures saved in '{save_dir}/'")
  
  
 # =============================================================================
@@ -732,27 +677,26 @@ def run_full_analysis(
  
 if __name__ == "__main__":
  
-    run_full_analysis(
-        dataset_path_test = "test_dataset.csv",
-        checkpoint_concat = "best_gnn_concat_model.pt",
-        checkpoint_cross  = "best_GNN_CrossAttention.pt",
-        target_idx        = 0,      # 0 = PCE (changer pour les autres cibles)
-        sample_idx        = 0,      # paire à analyser avec GNNExplainer
-        n_background      = 50,     # augmenter pour plus de précision SHAP
-        n_explain         = 30,     # idem
-        save_dir          = "shap_results",
-    )
+    # run_full_analysis(
+    #     dataset_path_test = "test_dataset.csv",
+    #     checkpoint_concat = "best_gnn_concat_model.pt",
+    #     checkpoint_cross  = "best_GNN_CrossAttention.pt",
+    #     target_idx        = 0,      # 0 = PCE (changer pour les autres cibles)
+    #     n_background      = 50,     # augmenter pour plus de précision SHAP
+    #     n_explain         = 30,     # idem
+    #     save_dir          = "shap_GNN_results",
+    # )
  
     # --- Pour analyser TOUTES les cibles ---
-    # for i in range(6):
-    #     run_full_analysis(..., target_idx=i, save_dir=f"shap_results/target_{outputs[i]}")
- 
-
-
-
-
-
-
-
-
-
+    for i in range(6):
+        print(f"running analysis for target: {outputs[i]}")
+        run_full_analysis(
+            dataset_path_test = "test_dataset.csv",
+        checkpoint_concat = "best_gnn_concat_model.pt",
+            checkpoint_cross  = "best_GNN_CrossAttention.pt",
+            target_idx        = i,      # 0 = PCE (changer pour les autres cibles)
+            n_background      = 50,     # augmenter pour plus de précision SHAP
+            n_explain         = 30,     # idem
+            save_dir          = f"shap_GNN_results/target_{outputs[i]}"
+        )
+        print(f"Finished analysis for target: {outputs[i]}")

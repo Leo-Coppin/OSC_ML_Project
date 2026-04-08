@@ -95,7 +95,7 @@ class WeightedMSELoss(nn.Module):
 
 
 # poids OSC typiques
-LOSS_WEIGHTS = [1.0, 1.0, 1.0, 1.0, 0.5, 0.5]
+LOSS_WEIGHTS = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 
 criterion = WeightedMSELoss(LOSS_WEIGHTS)
 
@@ -173,7 +173,7 @@ def objective(trial):
 
     lr = trial.suggest_float("lr", 1e-5, 1e-3, log=True)
     weight_decay = trial.suggest_float("weight_decay", 1e-6, 1e-3, log=True)
-    batch_size = trial.suggest_categorical("batch_size", [8, 16, 32])
+    batch_size = trial.suggest_categorical("batch_size", [8, 16, 32, 64])
 
     model = GNNCrossAttentionModel(
         hidden_dim=hidden_dim,
