@@ -74,7 +74,6 @@ class DonorAcceptorDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         item = self.data[idx]
-        # On récupère les graphes et la cible normalisée
         return item['graph_donor'], item['graph_acceptor'], item['y_norm']
 
 def collate_pairs(batch):
@@ -103,7 +102,7 @@ def train_one_epoch(model, loader, optimizer, device):
     return total_loss / len(loader)
 
 @torch.no_grad()
-def evaluate(model, loader, device):
+def evaluate(model, loader, device, scaler=None):
     model.eval()
     all_preds, all_targets = [], []
     for don, acc, y in loader:
@@ -114,22 +113,33 @@ def evaluate(model, loader, device):
     preds = torch.cat(all_preds)
     targets = torch.cat(all_targets)
     
-    mse = F.mse_loss(preds, targets).item()
+    # MSE sur données normalisées (utile pour le learning rate scheduler)
+    mse_norm = F.mse_loss(preds, targets).item()
     
-    # Calcul du R2 par colonne (Target)
-    ss_res = ((targets - preds) ** 2).sum(0)
-    ss_tot = ((targets - targets.mean(0)) ** 2).sum(0)
+    # Dénormalisation pour avoir des métriques physiques réelles
+    if scaler is not None:
+        preds_real = torch.tensor(scaler.inverse_transform(preds.numpy()))
+        targets_real = torch.tensor(scaler.inverse_transform(targets.numpy()))
+    else:
+        preds_real = preds
+        targets_real = targets
+    
+    # R²
+    ss_res = ((targets_real - preds_real) ** 2).sum(0)
+    ss_tot = ((targets_real - targets_real.mean(0)) ** 2).sum(0)
     r2_scores = (1 - ss_res / (ss_tot + 1e-8)).numpy()
     
-    return mse, r2_scores
+    # MAE et MSE réelles
+    mae_scores = torch.abs(targets_real - preds_real).mean(0).numpy()
+    mse_scores = ((targets_real - preds_real) ** 2).mean(0).numpy()
+    
+    return mse_norm, r2_scores, mae_scores, mse_scores
 
 # =============================================================================
 # 4. MAIN EXECUTION 
 # =============================================================================
 
 if __name__ == "__main__":
-    # Paramètres
-    # On utilise maintenant les fichiers générés par ton script de préparation
     TRAIN_CSV = "train_dataset.csv"
     TEST_CSV = "test_dataset.csv"
     
@@ -139,30 +149,24 @@ if __name__ == "__main__":
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     TARGET_NAMES = ['Voc', 'Jsc', 'FF', 'PCE', 'delta_HOMO', 'delta_LUMO']
 
-    # 1. Chargement et conversion des SMILES en graphes
     print("⏳ Étape 1 : Chargement des datasets séparés...")
     train_raw = load_dataset(TRAIN_CSV)
     test_raw = load_dataset(TEST_CSV)
     
-    # 2. Normalisation des cibles
-    # On concatène temporairement pour fitter le scaler sur l'ensemble du TRAIN
     print("⚖️ Étape 2 : Normalisation des cibles...")
-    
     train_y = np.array([d['y'].numpy() for d in train_raw])
     test_y = np.array([d['y'].numpy() for d in test_raw])
     
     scaler = StandardScaler()
-    # On fit le scaler UNIQUEMENT sur le train pour éviter le data leakage
     train_y_norm = scaler.fit_transform(train_y)
     test_y_norm = scaler.transform(test_y)
     
-    # Ré-injection des cibles normalisées dans les dictionnaires
     for i, data_dict in enumerate(train_raw):
         data_dict['y_norm'] = torch.tensor(train_y_norm[i], dtype=torch.float)
     for i, data_dict in enumerate(test_raw):
         data_dict['y_norm'] = torch.tensor(test_y_norm[i], dtype=torch.float)
     
-    # joblib.dump(scaler, "scaler_gnn.pkl")
+    joblib.dump(scaler, "scaler_gnn.pkl")
 
     # 3. Création des loaders
     train_loader = DataLoader(DonorAcceptorDataset(train_raw), batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate_pairs)
@@ -179,27 +183,33 @@ if __name__ == "__main__":
     best_mse = float('inf')
     for epoch in range(1, EPOCHS + 1):
         train_loss = train_one_epoch(model, train_loader, optimizer, DEVICE)
-        test_mse, r2_list = evaluate(model, test_loader, DEVICE)
-        scheduler.step(test_mse)
+        # On passe le scaler pour calculer les métriques
+        test_mse_norm, r2_list, mae_list, mse_list = evaluate(model, test_loader, DEVICE, scaler)
+        scheduler.step(test_mse_norm)
         
-        if test_mse < best_mse:
-            best_mse = test_mse
+        if test_mse_norm < best_mse:
+            best_mse = test_mse_norm
             torch.save(model.state_dict(), "best_gnn_concat_model.pt")
             
         if epoch % 10 == 0 or epoch == 1:
-            print(f"Epoch {epoch:03d} | Loss: {train_loss:.4f} | Test MSE: {test_mse:.4f} | R2 Moyen: {np.mean(r2_list):.3f}")
+            print(f"Epoch {epoch:03d} | Train Loss: {train_loss:.4f} | Test R2 Moyen: {np.mean(r2_list):.3f} | Test MAE Moyenne: {np.mean(mae_list):.3f}")
 
     # 5. Verdict Final
-    print("\n" + "="*30)
-    print("🏆 RÉSULTATS FINAUX DU GNN")
-    print("="*30)
-    # On recharge le meilleur modèle sauvegardé
+    print("\n" + "="*50)
+    print("🏆 RÉSULTATS FINAUX DU GNN (EN UNITÉS PHYSIQUES)")
+    print("="*50)
+    
     model.load_state_dict(torch.load("best_gnn_concat_model.pt"))
-    _, final_r2 = evaluate(model, test_loader, DEVICE)
+    _, final_r2, final_mae, final_mse = evaluate(model, test_loader, DEVICE, scaler)
     
-    for name, r2 in zip(TARGET_NAMES, final_r2):
-        print(f"Propriété {name:<12} : R² = {r2:.3f}")
+    # Création d'un tableau propre
+    results_df = pd.DataFrame({
+        'R²': final_r2,
+        'MAE': final_mae,
+        'MSE': final_mse
+    }, index=TARGET_NAMES)
     
-    print("-" * 30)
-    print(f"Moyenne R² GNN : {np.mean(final_r2):.3f}")
-    print("="*30)
+    print(results_df.round(4).to_string())
+    print("-" * 50)
+    print(f"✨ Moyennes Globales -> R² : {np.mean(final_r2):.4f} | MAE : {np.mean(final_mae):.4f} | MSE : {np.mean(final_mse):.4f}")
+    print("="*50)
