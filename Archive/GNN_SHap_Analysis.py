@@ -531,7 +531,7 @@ def compare_models_shap(
     Très utile pour voir si les deux modèles "regardent" les mêmes features.
     """
     target_name = outputs[target_idx]
-    print(f"\n📊 Comparaison SHAP — cible : {target_name}")
+    print(f"\n📊 Comparaison SHAP — target : {target_name}")
  
     results = {}
     if model_results is None:
@@ -561,7 +561,7 @@ def compare_models_shap(
     ax.set_xticks(x)
     ax.set_xticklabels([feat_names[i] for i in top_idx], rotation=45, ha='right', fontsize=9)
     ax.set_ylabel("|SHAP| moyen", fontsize=11)
-    ax.set_title(f"Comparaison d'importance des features — cible : {target_name}",
+    ax.set_title(f"feature importance comparasion  — target : {target_name}",
                  fontsize=13, fontweight='bold')
     ax.legend(fontsize=11)
     ax.grid(axis='y', alpha=0.3)
@@ -677,26 +677,26 @@ def run_full_analysis(
  
 if __name__ == "__main__":
  
-    # run_full_analysis(
-    #     dataset_path_test = "test_dataset.csv",
-    #     checkpoint_concat = "best_gnn_concat_model.pt",
-    #     checkpoint_cross  = "best_GNN_CrossAttention.pt",
-    #     target_idx        = 0,      # 0 = PCE (changer pour les autres cibles)
-    #     n_background      = 50,     # augmenter pour plus de précision SHAP
-    #     n_explain         = 30,     # idem
-    #     save_dir          = "shap_GNN_results",
-    # )
+    run_full_analysis(
+        dataset_path_test = "test_dataset.csv",
+        checkpoint_concat = "best_gnn_concat_model.pt",
+        checkpoint_cross  = "best_GNN_CrossAttention.pt",
+        target_idx        = 0,      # 0 = PCE (changer pour les autres cibles)
+        n_background      = 70,     # augmenter pour plus de précision SHAP
+        n_explain         = 50,     # idem
+        save_dir          = "shap_GNN_results",
+    )
  
     # --- Pour analyser TOUTES les cibles ---
-    for i in range(6):
-        print(f"running analysis for target: {outputs[i]}")
-        run_full_analysis(
-            dataset_path_test = "test_dataset.csv",
-        checkpoint_concat = "best_gnn_concat_model.pt",
-            checkpoint_cross  = "best_GNN_CrossAttention.pt",
-            target_idx        = i,      # 0 = PCE (changer pour les autres cibles)
-            n_background      = 50,     # augmenter pour plus de précision SHAP
-            n_explain         = 30,     # idem
-            save_dir          = f"shap_GNN_results/target_{outputs[i]}"
-        )
-        print(f"Finished analysis for target: {outputs[i]}")
+    # for i in range(6):
+    #     print(f"running analysis for target: {outputs[i]}")
+    #     run_full_analysis(
+    #         dataset_path_test = "test_dataset.csv",
+    #     checkpoint_concat = "best_gnn_concat_model.pt",
+    #         checkpoint_cross  = "best_GNN_CrossAttention.pt",
+    #         target_idx        = i,      # 0 = PCE (changer pour les autres cibles)
+    #         n_background      = 50,     # augmenter pour plus de précision SHAP
+    #         n_explain         = 30,     # idem
+    #         save_dir          = f"shap_GNN_results/target_{outputs[i]}"
+    #     )
+    #     print(f"Finished analysis for target: {outputs[i]}")
