@@ -56,15 +56,13 @@ class GNNExplainerAnalysis:
     """
     Applique GNNExplainer sur les deux GNN (Concat Fusion et Cross-Attention).
 
-    Pour chaque paire (donneur, accepteur) :
+    Pour chaque paire (donor, acceptor) :
       - GNNExplainer calcule un masque node_mask [N_atomes, N_features]
       - On moyenne sur les atomes → importance par feature [N_features]
-      - On stocke aussi les valeurs brutes des features pour la couleur du beeswarm
       - On accumule sur toutes les paires pour avoir une vue globale
 
     Produit :
-      - Un beeswarm plot style SHAP par modèle (donneur + accepteur séparés)
-      - Un summary bar plot par modèle (donneur + accepteur côte à côte)
+      - Un summary bar plot par modèle (donor + acceptor côte à côte)
       - Un bar plot comparatif des deux modèles
     """
 
@@ -81,12 +79,12 @@ class GNNExplainerAnalysis:
     def _make_single_graph_wrapper(self, fixed_graph: Data, role: str):
         """
         Retourne un wrapper nn.Module qui accepte UN seul graphe
-        (le donneur OU l'accepteur) et fixe l'autre.
+        (le donor OU l'acceptor) et fixe l'autre.
 
         Args:
             fixed_graph : le graphe fixé (l'autre molécule de la paire)
-            role        : "donor"    → on explique le donneur (fixed = accepteur)
-                          "acceptor" → on explique l'accepteur (fixed = donneur)
+            role        : "donor"    → on explique le donor (fixed = acceptor)
+                          "acceptor" → on explique l'acceptor (fixed = donor)
         """
         model      = self.model
         target_idx = self.target_idx
@@ -112,12 +110,12 @@ class GNNExplainerAnalysis:
         return _Wrapper()
 
     # -------------------------------------------------------------------------
-    # Explication d'une paire (donneur, accepteur)
+    # Explication d'une paire (donor, acceptor)
     # -------------------------------------------------------------------------
 
     def explain_pair(self, graph_don: Data, graph_acc: Data):
         """
-        Lance GNNExplainer sur le donneur ET l'accepteur d'une même paire.
+        Lance GNNExplainer sur le donor ET l'acceptor d'une même paire.
 
         Retourne un dict avec :
           - node_mask : [N_atomes, N_features]  masque brut GNNExplainer
@@ -169,7 +167,7 @@ class GNNExplainerAnalysis:
                 "node_imp"  : node_imp,
             }
 
-            print(f"  ✅ GNNExplainer [{role}] — {graph.x.shape[0]} atomes, "
+            print(f"GNNExplainer [{role}] — {graph.x.shape[0]} atoms, "
                   f"max feat imp = {feat_imp.max():.4f}")
 
         return results
@@ -183,14 +181,14 @@ class GNNExplainerAnalysis:
         Lance GNNExplainer sur n_explain paires et agrège les importances.
 
         Retourne :
-            don_feat_imp    : [N_features]         importance moyenne — donneur
-            acc_feat_imp    : [N_features]         importance moyenne — accepteur
-            don_feat_matrix : [n_explain, N_feat]  importances par paire — donneur
-            acc_feat_matrix : [n_explain, N_feat]  importances par paire — accepteur
-            don_feat_values : [n_explain, N_feat]  valeurs brutes des features — donneur
-            acc_feat_values : [n_explain, N_feat]  valeurs brutes des features — accepteur
+            don_feat_imp    : [N_features]         importance moyenne — donor
+            acc_feat_imp    : [N_features]         importance moyenne — acceptor
+            don_feat_matrix : [n_explain, N_feat]  importances par paire — donor
+            acc_feat_matrix : [n_explain, N_feat]  importances par paire — acceptor
+            don_feat_values : [n_explain, N_feat]  valeurs brutes des features — donor
+            acc_feat_values : [n_explain, N_feat]  valeurs brutes des features — acceptor
         """
-        print(f"\n🔍 GNNExplainer — {self.model_name} — cible : {self.target_name}")
+        print(f"\nGNNExplainer — {self.model_name} — target : {self.target_name}")
 
         np.random.seed(seed)
         indices = np.random.choice(len(dataset), size=min(n_explain, len(dataset)), replace=False)
@@ -205,7 +203,7 @@ class GNNExplainerAnalysis:
             graph_don = sample['graph_donor'].to(DEVICE)
             graph_acc = sample['graph_acceptor'].to(DEVICE)
 
-            print(f"  Paire {k+1}/{len(indices)} (idx={idx})")
+            print(f"  Pair {k+1}/{len(indices)} (idx={idx})")
             pair_res = self.explain_pair(graph_don, graph_acc)
 
             don_feat_matrix.append(pair_res["donor"]["feat_imp"])
@@ -238,7 +236,7 @@ class GNNExplainerAnalysis:
         self,
         feat_matrix : np.ndarray,   # [n_explain, N_features] — importances par paire
         feat_values : np.ndarray,   # [n_explain, N_features] — valeurs brutes (couleur)
-        role        : str,          # "Donneur" ou "Accepteur"
+        role        : str,          # "donor" ou "acceptor"
         top_k       : int  = 11,    # toutes les features par défaut (11 au total)
         save_path   : str  = None,
     ):
@@ -300,7 +298,7 @@ class GNNExplainerAnalysis:
 
         ax.set_yticks(range(k))
         ax.set_yticklabels(feat_names_ordered, fontsize=10)
-        ax.set_xlabel("Importance GNNExplainer (impact sur la sortie du modèle)", fontsize=11)
+        ax.set_xlabel("Importance GNNExplainer ", fontsize=11)
         ax.set_title(
             f"GNNExplainer Summary — {self.model_name} — {self.target_name} — {role}",
             fontsize=13, fontweight='bold',
@@ -324,7 +322,7 @@ class GNNExplainerAnalysis:
         plt.show()
 
     # -------------------------------------------------------------------------
-    # Summary bar plot : donneur + accepteur côte à côte
+    # Summary bar plot : donor + acceptor côte à côte
     # -------------------------------------------------------------------------
 
     def plot_summary_bar(
@@ -336,7 +334,7 @@ class GNNExplainerAnalysis:
     ):
         """
         Barplot horizontal des features les plus importantes (GNNExplainer).
-        Panneau gauche = donneur (rouge), panneau droite = accepteur (bleu).
+        Panneau gauche = donor (rouge), panneau droite = acceptor (bleu).
         """
         fig, axes = plt.subplots(1, 2, figsize=(14, 5))
         fig.suptitle(
@@ -345,8 +343,8 @@ class GNNExplainerAnalysis:
         )
 
         for ax, imp, label, color in [
-            (axes[0], don_feat_imp, "Donneur",   "#e74c3c"),
-            (axes[1], acc_feat_imp, "Accepteur", "#3498db"),
+            (axes[0], don_feat_imp, "Donor",   "#e74c3c"),
+            (axes[1], acc_feat_imp, "Acceptor", "#3498db"),
         ]:
             k          = min(top_k, len(imp))
             sorted_idx = np.argsort(imp)[::-1][:k]
@@ -356,7 +354,7 @@ class GNNExplainerAnalysis:
                 imp[sorted_idx][::-1],
                 color=color, alpha=0.85,
             )
-            ax.set_xlabel("Importance moyenne (GNNExplainer)", fontsize=11)
+            ax.set_xlabel("Mean Importance (GNNExplainer)", fontsize=11)
             ax.set_title(label, fontsize=12)
             ax.grid(axis='x', alpha=0.3)
             ax.spines['top'].set_visible(False)
@@ -385,12 +383,12 @@ def compare_models_gnnexplainer(
     results_* : dict avec clés "donor" et "acceptor", chacune contenant
                 un tableau [N_features] d'importances moyennes.
 
-    Produit un barplot à 2 panneaux (Donneur / Accepteur),
+    Produit un barplot à 2 panneaux (donor / acceptor),
     avec les barres Concat et Cross-Attention côte à côte.
     """
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
     fig.suptitle(
-        f"GNNExplainer — Comparaison des modèles — {target_name}",
+        f"GNNExplainer — Models Comparison — {target_name}",
         fontsize=14, fontweight='bold',
     )
 
@@ -398,8 +396,8 @@ def compare_models_gnnexplainer(
     width = 0.35
 
     for ax, role, label in [
-        (axes[0], "donor",    "Donneur"),
-        (axes[1], "acceptor", "Accepteur"),
+        (axes[0], "donor",    "donor"),
+        (axes[1], "acceptor", "acceptor"),
     ]:
         imp_concat = results_concat[role]
         imp_cross  = results_cross[role]
@@ -412,7 +410,7 @@ def compare_models_gnnexplainer(
 
         ax.set_xticks(x)
         ax.set_xticklabels([Atom_Feature_Names[i] for i in order], rotation=45, ha='right', fontsize=9)
-        ax.set_ylabel("Importance moyenne (GNNExplainer)", fontsize=11)
+        ax.set_ylabel("Mean Importance (GNNExplainer)", fontsize=11)
         ax.set_title(label, fontsize=12)
         ax.legend(fontsize=10)
         ax.grid(axis='y', alpha=0.3)
@@ -521,8 +519,8 @@ def run_full_analysis(
     Pour chaque modèle :
       1. Lance GNNExplainer sur n_explain paires
       2. Agrège les importances de features
-      3. Produit un beeswarm plot style SHAP (donneur + accepteur séparés)
-      4. Produit un summary bar plot (donneur + accepteur côte à côte)
+      3. Produit un beeswarm plot style SHAP (donor + acceptor séparés)
+      4. Produit un summary bar plot (donor + acceptor côte à côte)
 
     Puis compare les deux modèles sur un graphique de comparaison.
 
@@ -539,7 +537,7 @@ def run_full_analysis(
     target_name = outputs[target_idx]
 
     print("=" * 60)
-    print(f"  GNNExplainer Analysis — cible : {target_name}")
+    print(f"  GNNExplainer Analysis — target : {target_name}")
     print("=" * 60)
 
     # ------------------------------------------------------------------
@@ -614,7 +612,7 @@ def run_full_analysis(
         analyser.plot_beeswarm(
             feat_matrix = don_feat_matrix,
             feat_values = don_feat_values,
-            role        = "Donneur",
+            role        = "donor",
             save_path   = os.path.join(
                 save_dir,
                 f"gnnexplainer_beeswarm_donor_{name}_{target_name}.png",
@@ -623,14 +621,14 @@ def run_full_analysis(
         analyser.plot_beeswarm(
             feat_matrix = acc_feat_matrix,
             feat_values = acc_feat_values,
-            role        = "Accepteur",
+            role        = "acceptor",
             save_path   = os.path.join(
                 save_dir,
                 f"gnnexplainer_beeswarm_acceptor_{name}_{target_name}.png",
             ),
         )
 
-        # -- Summary bar plot classique (donneur + accepteur côte à côte)
+        # -- Summary bar plot classique (donor + acceptor côte à côte)
         analyser.plot_summary_bar(
             don_feat_imp = don_feat_imp,
             acc_feat_imp = acc_feat_imp,
@@ -651,7 +649,7 @@ def run_full_analysis(
         save_dir       = save_dir,
     )
 
-    print(f"\n✅ Analyse GNNExplainer terminée ! Figures sauvegardées dans '{save_dir}/'")
+    
     return all_results
 
 
@@ -661,27 +659,12 @@ def run_full_analysis(
 
 if __name__ == "__main__":
 
-    # --- Pour une seule cible (ex : PCE) ---
-    # run_full_analysis(
-    #     dataset_path_test = "test_dataset.csv",
-    #     checkpoint_concat = "best_gnn_concat_model.pt",
-    #     checkpoint_cross  = "best_GNN_CrossAttention.pt",
-    #     target_idx        = 0,    # 0 = PCE
-    #     n_explain         = 30,
-    #     save_dir          = "gnnexplainer_results",
-    # )
-
-    # --- Pour toutes les cibles ---
-    for i in range(6):
-        print(f"\n{'='*60}")
-        print(f"  Cible : {outputs[i]}")
-        print(f"{'='*60}")
-        run_full_analysis(
-            dataset_path_test = "test_dataset.csv",
-            checkpoint_concat = "best_gnn_concat_model.pt",
-            checkpoint_cross  = "best_GNN_CrossAttention.pt",
-            target_idx        = i,
-            n_explain         = 30,
-            save_dir          = f"gnnexplainer_results/target_{outputs[i]}",
-        )
-        print(f"Analyse terminée pour la cible : {outputs[i]}")
+    # --- Pour une seule target (ex : PCE) ---
+    run_full_analysis(
+        dataset_path_test = "test_dataset.csv",
+        checkpoint_concat = "best_gnn_concat_model.pt",
+        checkpoint_cross  = "best_GNN_CrossAttention.pt",
+        target_idx        = 0,    # 0 = PCE
+        n_explain         = 30,
+        save_dir          = "gnnexplainer_results",
+    )
