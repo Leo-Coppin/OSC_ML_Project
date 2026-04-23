@@ -199,7 +199,7 @@ if __name__ == "__main__":
     print("🏆 RÉSULTATS FINAUX DU GNN (EN UNITÉS PHYSIQUES)")
     print("="*50)
     
-    model.load_state_dict(torch.load("best_gnn_concat_model.pt"))
+    #model.load_state_dict(torch.load("best_gnn_concat_model.pt"))
     _, final_r2, final_mae, final_mse = evaluate(model, test_loader, DEVICE, scaler)
     
     # Création d'un tableau propre
@@ -213,3 +213,28 @@ if __name__ == "__main__":
     print("-" * 50)
     print(f"✨ Moyennes Globales -> R² : {np.mean(final_r2):.4f} | MAE : {np.mean(final_mae):.4f} | MSE : {np.mean(final_mse):.4f}")
     print("="*50)
+    
+    #model = GNNConcatFusion(share_encoder=False, mlp_hidden=256, dropout=0.5).to(DEVICE)
+    model.load_state_dict(torch.load("best_gnn_concat_model.pt"))
+    
+    for i in range(1, 8):
+        shuffle_test_csv = f"DataShuffle/test_dataset_{i}.csv"
+        shuffle_test_raw = load_dataset(shuffle_test_csv)
+
+        # ✅ Ajouter y_norm comme pour les autres datasets
+        shuffle_y = np.array([d['y'].numpy() for d in shuffle_test_raw])
+        shuffle_y_norm = scaler.transform(shuffle_y)  # transform seulement, pas fit !
+        for j, data_dict in enumerate(shuffle_test_raw):
+            data_dict['y_norm'] = torch.tensor(shuffle_y_norm[j], dtype=torch.float)
+
+        test_loader = DataLoader(DonorAcceptorDataset(shuffle_test_raw), batch_size=BATCH_SIZE, collate_fn=collate_pairs)
+        _, r2_list, mae_list, mse_list = evaluate(model, test_loader, DEVICE, scaler)
+        
+        results_df = pd.DataFrame({
+            'R²': r2_list,
+            'MAE': mae_list,
+            'MSE': mse_list
+        }, index=TARGET_NAMES)
+        
+        print(f"\n--- Shuffle {i} ---")
+        print(results_df.round(4))

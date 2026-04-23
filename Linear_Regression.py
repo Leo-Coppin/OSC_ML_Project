@@ -58,7 +58,7 @@ train_test_pairs = [[X_train_RDKit, X_test_RDKit, "rdkit"], [X_train_Mordred, X_
 
 base_lr = LinearRegression()
 multi_output_model = MultiOutputRegressor(base_lr) 
-
+"""
 for pairs in train_test_pairs : 
     X_train, X_test, name = pairs
                  
@@ -81,7 +81,7 @@ for pairs in train_test_pairs :
     
     print(f"Results for {name} :")
     print(results_df.round(4))
-#"""
+"""
 X_train = X_train_Pubchem
 X_test = X_test_Pubchem
 
@@ -106,3 +106,24 @@ results = pd.DataFrame({
 
 print("Results for Voc, Jsc FF, PCE, delta HOMO and delta LUMO:")
 print(results.round(4))
+
+
+for i in range(1,8):
+    X_test = pd.read_csv(f"DataShuffle/Data_PubChem_test_{i}.csv", sep=";")
+    y_test = pd.read_csv(f"DataShuffle/test_dataset_{i}.csv", sep=';')
+    y_test = y_test[outputs]
+
+    y_pred = model.predict(X_test)
+
+    r2_per_col = r2_score(y_test, y_pred, multioutput='raw_values')
+    mae_per_col = mean_absolute_error(y_test, y_pred, multioutput='raw_values')
+    mse_per_col = mean_squared_error(y_test, y_pred, multioutput='raw_values')
+
+    results_detailed = pd.DataFrame({
+        'R²': r2_per_col,
+        'MAE': mae_per_col,
+        'MSE': mse_per_col
+    }, index=outputs)
+
+    print(f"\nDetails per property for shuffle : {i}")
+    print(results_detailed.round(4))

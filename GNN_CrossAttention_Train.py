@@ -1,5 +1,4 @@
-import os
-import json
+import pandas as pd
 import torch
 import optuna
 import random
@@ -304,7 +303,7 @@ model.eval()
 
 print("\nModel loaded successfully")
 
-
+"""
 # =============================
 # TEST
 # =============================
@@ -341,7 +340,7 @@ print("\n===== GLOBAL METRICS =====")
 print("MSE:", mse)
 print("MAE:", mae)
 print("R2 :", r2)
-
+"""
 
 # =============================
 # METRICS PAR PROPRIÉTÉ
@@ -349,15 +348,59 @@ print("R2 :", r2)
 
 names = ["PCE", "Voc", "Jsc", "FF", "dHOMO", "dLUMO"]
 
-print("\n===== METRICS PER PROPERTY =====")
+# print("\n===== METRICS PER PROPERTY =====")
 
-for i in range(6):
+# for i in range(6):
 
-    mse_i = mean_squared_error(all_targets[:, i], all_preds[:, i])
-    mae_i = mean_absolute_error(all_targets[:, i], all_preds[:, i])
-    r2_i = r2_score(all_targets[:, i], all_preds[:, i])
+#     mse_i = mean_squared_error(all_targets[:, i], all_preds[:, i])
+#     mae_i = mean_absolute_error(all_targets[:, i], all_preds[:, i])
+#     r2_i = r2_score(all_targets[:, i], all_preds[:, i])
 
-    print(f"\n{names[i]}")
-    print("MSE:", mse_i)
-    print("MAE:", mae_i)
-    print("R2 :", r2_i)
+#     print(f"\n{names[i]}")
+#     print("MSE:", mse_i)
+#     print("MAE:", mae_i)
+#     print("R2 :", r2_i)
+
+
+# evaluation over all shuffles 
+for i in range(1,8):
+    train_data = load_dataset(f"DataShuffle/train_dataset_{i}.csv")
+    test_data = load_dataset(f"DataShuffle/test_dataset_{i}.csv")
+
+    test_loader = DataLoader(
+        test_data,
+        batch_size=16,
+        shuffle=False,
+        collate_fn=collate_fn
+    )
+    all_preds = []
+    all_targets = []
+
+    with torch.no_grad():
+
+        for graph_don, graph_acc, y in test_loader:
+
+            graph_don = graph_don.to(DEVICE)
+            graph_acc = graph_acc.to(DEVICE)
+            y = y.to(DEVICE)
+
+            preds = model(graph_don, graph_acc)
+
+            all_preds.append(preds.cpu().numpy())
+            all_targets.append(y.cpu().numpy())
+
+    all_preds = np.vstack(all_preds)
+    all_targets = np.vstack(all_targets)
+
+    print(f"\n===== SHUFFLE {i} =====")
+    for i in range(6):
+
+        mse_i = mean_squared_error(all_targets[:, i], all_preds[:, i])
+        mae_i = mean_absolute_error(all_targets[:, i], all_preds[:, i])
+        r2_i = r2_score(all_targets[:, i], all_preds[:, i])
+
+        print(f"\n{names[i]}")
+        print("R2 :", round(r2_i, 4))
+        print("MSE:", round(mse_i, 4))
+        print("MAE:", round(mae_i, 4))
+        
